@@ -1,20 +1,23 @@
-<div align="center">
-<img width="1200" height="475" alt="GHBanner" src="https://github.com/user-attachments/assets/0aa67016-6eaf-458a-adb2-6e31a0763ed6" />
-</div>
 
-# Run and deploy your AI Studio app
+# 🚀 Gênio Financeiro
 
-This contains everything you need to run your app locally.
+Aplicativo de controle financeiro inteligente com IA (Gemini).
 
-View your app in AI Studio: https://ai.studio/apps/drive/1VM-zKRhcLLwg27QUQ847OA87E71xSewq
+## 🌍 Deploy Online
 
-## Run Locally
+### Vercel
+1. Suba este código para um repositório no **GitHub**.
+2. Conecte o repositório na **Vercel**.
+3. Em "Environment Variables", adicione a chave `API_KEY` com o valor da sua chave do Google Gemini.
 
-**Prerequisites:**  Node.js
+### Firebase
+1. Instale o CLI: `npm install -g firebase-tools`
+2. Login: `firebase login`
+3. Inicialize: `firebase init hosting` (escolha a pasta `dist` como public directory).
+4. Deploy: `npm run build && firebase deploy`
 
-
-1. Install dependencies:
-   `npm install`
-2. Set the `GEMINI_API_KEY` in [.env.local](.env.local) to your Gemini API key
-3. Run the app:
-   `npm run dev`
+## 🛠️ Desenvolvimento Local
+```bash
+npm install
+npm run dev
+```

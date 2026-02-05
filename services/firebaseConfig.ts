@@ -4,12 +4,12 @@ import { getFirestore } from "firebase/firestore";
 import { getAuth } from "firebase/auth";
 
 const firebaseConfig = {
-  apiKey: "SUA_API_KEY",
-  authDomain: "SEU_PROJETO.firebaseapp.com",
-  projectId: "SEU_PROJETO_ID",
-  storageBucket: "SEU_PROJETO.appspot.com",
-  messagingSenderId: "SEU_SENDER_ID",
-  appId: "SEU_APP_ID"
+  apiKey: "AIzaSyDSHVmQzOzykcHZdAyrIAA4WT9EcKccKP8",
+  authDomain: "geniofinanceiro-7d8c9.firebaseapp.com",
+  projectId: "geniofinanceiro-7d8c9",
+  storageBucket: "geniofinanceiro-7d8c9.firebasestorage.app",
+  messagingSenderId: "801914709880",
+  appId: "1:801914709880:web:440c2652e34ea7427a8a8d"
 };
 
 const app = initializeApp(firebaseConfig);

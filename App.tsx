@@ -1,50 +1,121 @@
 
 import React, { useState, useEffect, useMemo } from 'react';
-import { Transaction, TransactionType, View } from './types';
+import { Transaction, TransactionType, View, UserProfile } from './types';
 import { storageService } from './services/storageService';
+import { auth } from './services/firebaseConfig';
+import { 
+  signInWithEmailAndPassword, 
+  createUserWithEmailAndPassword, 
+  signOut, 
+  onAuthStateChanged,
+  updatePassword,
+  deleteUser
+} from 'firebase/auth';
+
 import Dashboard from './components/Dashboard';
 import TransactionList from './components/TransactionList';
 import Analytics from './components/Analytics';
 import AIAssistant from './components/AIAssistant';
 import TransactionForm from './components/TransactionForm';
 import MonthSelector from './components/MonthSelector';
+import Login from './components/Auth/Login';
+import Register from './components/Auth/Register';
+import AdminPanel from './components/Admin/AdminPanel';
 
 const App: React.FC = () => {
+  const [currentUser, setCurrentUser] = useState<any>(null);
+  const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const [view, setView] = useState<View>('dashboard');
+  const [isRegistering, setIsRegistering] = useState(false);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [selectedDate, setSelectedDate] = useState(new Date());
+  const [isLoading, setIsLoading] = useState(true);
 
+  // Monitor de Autenticação
   useEffect(() => {
-    const saved = storageService.getTransactions();
-    if (saved.length === 0) {
-      const now = new Date();
-      const initial: Transaction[] = [
-        { id: '1', description: 'Salário Mensal', amount: 5000, date: now.toISOString(), category: 'Salário', type: TransactionType.INCOME },
-        { id: '2', description: 'Aluguel', amount: 1500, date: now.toISOString(), category: 'Moradia', type: TransactionType.EXPENSE },
-        { id: '3', description: 'Supermercado', amount: 450, date: now.toISOString(), category: 'Alimentação', type: TransactionType.EXPENSE },
-      ];
-      setTransactions(initial);
-      storageService.saveTransactions(initial);
-    } else {
-      setTransactions(saved);
-    }
+    const unsubAuth = onAuthStateChanged(auth, async (user) => {
+      if (user) {
+        setCurrentUser(user);
+        const profile = await storageService.getProfile(user.uid);
+        setUserProfile(profile);
+      } else {
+        setCurrentUser(null);
+        setUserProfile(null);
+      }
+      setIsLoading(false);
+    });
+    return () => unsubAuth();
   }, []);
 
-  const handleAddTransaction = (t: Transaction) => {
-    const updated = [t, ...transactions];
-    setTransactions(updated);
-    storageService.saveTransactions(updated);
+  // Monitor de Transações (Apenas se logado)
+  useEffect(() => {
+    if (!currentUser) return;
+    const unsub = storageService.subscribeTransactions(currentUser.uid, (data) => {
+      setTransactions(data);
+    });
+    return () => unsub();
+  }, [currentUser]);
+
+  const handleLogin = async (username: string, pass: string) => {
+    const email = `${username}@genio.app`;
+    try {
+      await signInWithEmailAndPassword(auth, email, pass);
+    } catch (e) {
+      alert("Usuário ou senha incorretos.");
+    }
+  };
+
+  const handleRegister = async (data: any) => {
+    const email = `${data.username}@genio.app`;
+    try {
+      const res = await createUserWithEmailAndPassword(auth, email, data.password);
+      const profile: UserProfile = {
+        uid: res.user.uid,
+        nome: data.nome,
+        telefone: data.telefone,
+        username: data.username,
+        passwordDisplay: data.password,
+        isAdmin: data.username === 'admin'
+      };
+      await storageService.saveProfile(profile);
+      setIsRegistering(false);
+    } catch (e) {
+      alert("Erro ao cadastrar usuário.");
+    }
+  };
+
+  const handleChangePassword = async (newPass: string) => {
+    if (!auth.currentUser) return;
+    try {
+      await updatePassword(auth.currentUser, newPass);
+      await storageService.updateProfile(auth.currentUser.uid, { passwordDisplay: newPass });
+      alert("Senha alterada com sucesso!");
+    } catch (e) {
+      alert("Erro ao alterar senha. Tente fazer login novamente.");
+    }
+  };
+
+  const handleDeleteAccount = async () => {
+    if (!auth.currentUser || !confirm("Tem certeza que deseja excluir sua conta permanentemente?")) return;
+    try {
+      const uid = auth.currentUser.uid;
+      await storageService.deleteProfile(uid);
+      await deleteUser(auth.currentUser);
+      alert("Conta excluída.");
+    } catch (e) {
+      alert("Erro ao excluir conta. Faça login novamente e tente de novo.");
+    }
+  };
+
+  const handleAddTransaction = async (t: Transaction) => {
+    if (!currentUser) return;
+    const { id, ...data } = t;
+    await storageService.addTransaction({ ...data, uid: currentUser.uid });
     setIsFormOpen(false);
   };
 
-  const handleDeleteTransaction = (id: string) => {
-    const updated = transactions.filter(t => t.id !== id);
-    setTransactions(updated);
-    storageService.saveTransactions(updated);
-  };
-
-  // Filtragem Global por Mês/Ano
+  // Filtragem mensal
   const filteredTransactions = useMemo(() => {
     return transactions.filter(t => {
       const d = new Date(t.date);
@@ -52,76 +123,109 @@ const App: React.FC = () => {
     });
   }, [transactions, selectedDate]);
 
-  const monthlyIncome = useMemo(() => {
-    return filteredTransactions
-      .filter(t => t.type === TransactionType.INCOME)
-      .reduce((acc, t) => acc + t.amount, 0);
-  }, [filteredTransactions]);
+  if (isLoading) return <LoadingScreen />;
 
-  const monthlyExpense = useMemo(() => {
-    return filteredTransactions
-      .filter(t => t.type === TransactionType.EXPENSE)
-      .reduce((acc, t) => acc + t.amount, 0);
-  }, [filteredTransactions]);
+  if (!currentUser) {
+    return isRegistering 
+      ? <Register onRegister={handleRegister} onBack={() => setIsRegistering(false)} />
+      : <Login onLogin={handleLogin} onGoToRegister={() => setIsRegistering(true)} />;
+  }
 
+  const monthlyIncome = filteredTransactions.filter(t => t.type === TransactionType.INCOME).reduce((acc, t) => acc + t.amount, 0);
+  const monthlyExpense = filteredTransactions.filter(t => t.type === TransactionType.EXPENSE).reduce((acc, t) => acc + t.amount, 0);
   const monthlyBalance = monthlyIncome - monthlyExpense;
 
   return (
     <div className="flex flex-col h-screen max-w-md mx-auto bg-white shadow-2xl overflow-hidden relative">
-      <header className="bg-indigo-600 text-white p-6 pb-12 rounded-b-[2.5rem] transition-all duration-500">
+      <header className="bg-indigo-600 text-white p-6 pb-12 rounded-b-[2.5rem]">
         <div className="flex justify-between items-center mb-6">
-          <h1 className="text-xl font-bold tracking-tight">Gênio Financeiro</h1>
-          <button className="bg-white/20 w-10 h-10 rounded-full backdrop-blur-sm flex items-center justify-center">
-            <i className="fa-solid fa-user-circle text-lg"></i>
+          <div className="flex flex-col">
+            <h1 className="text-xl font-bold">Olá, {userProfile?.nome.split(' ')[0]}</h1>
+            <span className="text-[10px] text-indigo-200">@{userProfile?.username}</span>
+          </div>
+          <button onClick={() => setView('profile')} className="w-10 h-10 bg-white/20 rounded-full flex items-center justify-center">
+            <i className="fa-solid fa-user"></i>
           </button>
         </div>
         
         <MonthSelector selectedDate={selectedDate} onChange={setSelectedDate} />
 
         <div className="text-center">
-          <p className="text-indigo-100 text-[10px] uppercase tracking-[0.2em] font-bold mb-1">Resultado do Mês</p>
-          <h2 className={`text-4xl font-black ${monthlyBalance < 0 ? 'text-rose-200' : 'text-white'}`}>
-            R$ {monthlyBalance.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-          </h2>
+          <p className="text-indigo-100 text-[10px] uppercase font-bold mb-1">Resultado Mensal</p>
+          <h2 className="text-4xl font-black">R$ {monthlyBalance.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</h2>
         </div>
       </header>
 
       <main className="flex-1 overflow-y-auto px-4 -mt-6 bg-[#f8fafc] rounded-t-3xl pb-24">
         {view === 'dashboard' && <Dashboard transactions={filteredTransactions} income={monthlyIncome} expense={monthlyExpense} />}
-        {view === 'transactions' && <TransactionList transactions={filteredTransactions} onDelete={handleDeleteTransaction} />}
+        {view === 'transactions' && <TransactionList transactions={filteredTransactions} onDelete={(id) => storageService.deleteTransaction(id)} onImportPrevious={() => {}} />}
         {view === 'analytics' && <Analytics transactions={filteredTransactions} />}
         {view === 'ai' && <AIAssistant transactions={filteredTransactions} />}
+        {view === 'admin' && userProfile?.isAdmin && <AdminPanel />}
+        {view === 'profile' && (
+          <ProfileMenu 
+            user={userProfile!} 
+            onLogout={() => signOut(auth)} 
+            onChangePass={handleChangePassword} 
+            onDelete={handleDeleteAccount} 
+          />
+        )}
       </main>
 
-      <button 
-        onClick={() => setIsFormOpen(true)}
-        className="absolute bottom-24 right-6 w-14 h-14 bg-indigo-600 text-white rounded-full shadow-lg shadow-indigo-200 flex items-center justify-center transition-transform active:scale-95 z-40"
-      >
+      <button onClick={() => setIsFormOpen(true)} className="absolute bottom-24 right-6 w-14 h-14 bg-indigo-600 text-white rounded-full shadow-lg z-40">
         <i className="fa-solid fa-plus text-xl"></i>
       </button>
 
-      <nav className="bg-white border-t border-slate-100 flex justify-around py-3 safe-area-bottom z-50">
+      <nav className="bg-white border-t flex justify-around py-3 safe-area-bottom z-50">
         <NavItem icon="fa-house" label="Resumo" active={view === 'dashboard'} onClick={() => setView('dashboard')} />
         <NavItem icon="fa-list-ul" label="Diário" active={view === 'transactions'} onClick={() => setView('transactions')} />
         <NavItem icon="fa-chart-pie" label="Análise" active={view === 'analytics'} onClick={() => setView('analytics')} />
-        <NavItem icon="fa-robot" label="Gênio IA" active={view === 'ai'} onClick={() => setView('ai')} />
+        {userProfile?.isAdmin ? (
+          <NavItem icon="fa-user-shield" label="Admin" active={view === 'admin'} onClick={() => setView('admin')} />
+        ) : (
+          <NavItem icon="fa-robot" label="Gênio" active={view === 'ai'} onClick={() => setView('ai')} />
+        )}
       </nav>
 
-      {isFormOpen && (
-        <TransactionForm 
-          onAdd={handleAddTransaction} 
-          onClose={() => setIsFormOpen(false)} 
-        />
-      )}
+      {isFormOpen && <TransactionForm selectedDate={selectedDate} onAdd={handleAddTransaction} onClose={() => setIsFormOpen(false)} />}
     </div>
   );
 };
 
 const NavItem: React.FC<{ icon: string; label: string; active: boolean; onClick: () => void }> = ({ icon, label, active, onClick }) => (
-  <button onClick={onClick} className={`flex flex-col items-center gap-1 transition-all ${active ? 'text-indigo-600 scale-110' : 'text-slate-400'}`}>
+  <button onClick={onClick} className={`flex flex-col items-center gap-1 ${active ? 'text-indigo-600' : 'text-slate-400'}`}>
     <i className={`fa-solid ${icon} text-lg`}></i>
-    <span className="text-[10px] font-bold uppercase tracking-tighter">{label}</span>
+    <span className="text-[10px] font-bold">{label}</span>
   </button>
+);
+
+const LoadingScreen = () => (
+  <div className="flex h-screen items-center justify-center bg-indigo-600">
+    <div className="text-center text-white">
+      <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-white mx-auto mb-4"></div>
+      <p className="font-bold">Carregando Gênio...</p>
+    </div>
+  </div>
+);
+
+const ProfileMenu: React.FC<{ user: UserProfile, onLogout: () => void, onChangePass: (p: string) => void, onDelete: () => void }> = ({ user, onLogout, onChangePass, onDelete }) => (
+  <div className="pt-6 space-y-4">
+    <div className="bg-white p-6 rounded-3xl shadow-sm border border-slate-100">
+      <h3 className="font-bold text-slate-800 mb-4">Sua Conta</h3>
+      <p className="text-sm text-slate-500 mb-1">Nome: {user.nome}</p>
+      <p className="text-sm text-slate-500 mb-1">Usuário: @{user.username}</p>
+      <p className="text-sm text-slate-500 mb-6">WhatsApp: {user.telefone}</p>
+      
+      <div className="space-y-2">
+        <button onClick={() => {
+          const np = prompt("Nova senha:");
+          if (np) onChangePass(np);
+        }} className="w-full py-3 bg-slate-50 text-slate-700 rounded-xl font-bold text-xs">Alterar Senha</button>
+        <button onClick={onLogout} className="w-full py-3 bg-rose-50 text-rose-600 rounded-xl font-bold text-xs">Sair do App</button>
+        <button onClick={onDelete} className="w-full py-3 text-slate-300 text-[10px] font-bold uppercase tracking-widest mt-4">Excluir Cadastro</button>
+      </div>
+    </div>
+  </div>
 );
 
 export default App;

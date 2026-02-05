@@ -11,15 +11,19 @@ export interface Transaction {
   date: string;
   category: string;
   type: TransactionType;
+  uid?: string; // Vinculação com o usuário
 }
 
-export interface Budget {
-  category: string;
-  limit: number;
-  spent: number;
+export interface UserProfile {
+  uid: string;
+  nome: string;
+  telefone: string;
+  username: string;
+  passwordDisplay: string; // Apenas para o requisito de enviar a senha via WhatsApp
+  isAdmin: boolean;
 }
 
-export type View = 'dashboard' | 'transactions' | 'analytics' | 'ai';
+export type View = 'dashboard' | 'transactions' | 'analytics' | 'ai' | 'admin' | 'profile';
 
 export const CATEGORIES = [
   'Alimentação',

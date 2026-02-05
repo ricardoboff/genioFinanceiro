@@ -5,9 +5,10 @@ import { Transaction, TransactionType, CATEGORIES } from '../types';
 interface Props {
   onAdd: (t: Transaction) => void;
   onClose: () => void;
+  selectedDate: Date;
 }
 
-const TransactionForm: React.FC<Props> = ({ onAdd, onClose }) => {
+const TransactionForm: React.FC<Props> = ({ onAdd, onClose, selectedDate }) => {
   const [type, setType] = useState<TransactionType>(TransactionType.EXPENSE);
   const [description, setDescription] = useState('');
   const [amount, setAmount] = useState('');
@@ -17,11 +18,22 @@ const TransactionForm: React.FC<Props> = ({ onAdd, onClose }) => {
     e.preventDefault();
     if (!description || !amount) return;
 
+    // Se o dia de hoje for no mês selecionado, usa a hora exata. 
+    // Senão, usa o primeiro dia do mês selecionado.
+    const now = new Date();
+    let transactionDate: Date;
+    
+    if (now.getMonth() === selectedDate.getMonth() && now.getFullYear() === selectedDate.getFullYear()) {
+      transactionDate = now;
+    } else {
+      transactionDate = new Date(selectedDate.getFullYear(), selectedDate.getMonth(), 1, 12, 0, 0);
+    }
+
     const newTransaction: Transaction = {
       id: Math.random().toString(36).substr(2, 9),
       description,
-      amount: parseFloat(amount),
-      date: new Date().toISOString(),
+      amount: parseFloat(amount.replace(',', '.')),
+      date: transactionDate.toISOString(),
       category,
       type,
     };
@@ -67,8 +79,8 @@ const TransactionForm: React.FC<Props> = ({ onAdd, onClose }) => {
           <div>
             <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2 px-1">Valor (R$)</label>
             <input 
-              type="number" 
-              step="0.01"
+              type="text" 
+              inputMode="decimal"
               value={amount}
               onChange={(e) => setAmount(e.target.value)}
               placeholder="0,00"

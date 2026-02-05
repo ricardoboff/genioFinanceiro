@@ -6,9 +6,10 @@ import { getCategoryIcon } from './Dashboard';
 interface Props {
   transactions: Transaction[];
   onDelete: (id: string) => void;
+  onImportPrevious: () => void;
 }
 
-const TransactionList: React.FC<Props> = ({ transactions, onDelete }) => {
+const TransactionList: React.FC<Props> = ({ transactions, onDelete, onImportPrevious }) => {
   // Agrupar por dia
   const groupedTransactions = useMemo(() => {
     const groups: Record<string, Transaction[]> = {};
@@ -17,16 +18,31 @@ const TransactionList: React.FC<Props> = ({ transactions, onDelete }) => {
       if (!groups[date]) groups[date] = [];
       groups[date].push(t);
     });
-    return Object.entries(groups).sort((a, b) => new Date(b[0]).getTime() - new Date(a[0]).getTime());
+    return Object.entries(groups).sort((a, b) => {
+      const dateA = a[0].split('/').reverse().join('');
+      const dateB = b[0].split('/').reverse().join('');
+      return dateB.localeCompare(dateA);
+    });
   }, [transactions]);
 
   return (
     <div className="space-y-6 pt-4">
       <div className="flex justify-between items-center">
         <h2 className="text-lg font-bold text-slate-800">Lançamentos Diários</h2>
-        <span className="text-[10px] bg-slate-200 text-slate-600 px-2 py-1 rounded-full font-bold">
-          {transactions.length} Itens
-        </span>
+        <div className="flex gap-2">
+          {transactions.length > 0 && (
+            <button 
+              onClick={onImportPrevious}
+              className="text-[10px] bg-indigo-50 text-indigo-600 px-3 py-1 rounded-full font-bold border border-indigo-100 flex items-center gap-1"
+            >
+              <i className="fa-solid fa-wand-magic-sparkles"></i>
+              Importar Fixas
+            </button>
+          )}
+          <span className="text-[10px] bg-slate-200 text-slate-600 px-2 py-1 rounded-full font-bold">
+            {transactions.length} Itens
+          </span>
+        </div>
       </div>
 
       <div className="space-y-6">
@@ -60,11 +76,20 @@ const TransactionList: React.FC<Props> = ({ transactions, onDelete }) => {
         ))}
         
         {transactions.length === 0 && (
-          <div className="text-center py-20 bg-white rounded-[2rem] border border-slate-100 shadow-inner">
+          <div className="text-center py-12 px-6 bg-white rounded-[2rem] border border-slate-100 shadow-inner">
             <div className="w-16 h-16 bg-slate-50 rounded-full flex items-center justify-center mx-auto mb-4">
               <i className="fa-solid fa-calendar-xmark text-slate-200 text-2xl"></i>
             </div>
-            <p className="text-slate-400 text-sm font-medium">Sem lançamentos neste período.</p>
+            <p className="text-slate-500 text-sm font-bold mb-2">Nada por aqui ainda!</p>
+            <p className="text-slate-400 text-xs mb-8">Deseja copiar as despesas fixas do mês anterior para começar?</p>
+            
+            <button 
+              onClick={onImportPrevious}
+              className="w-full py-4 bg-indigo-50 text-indigo-600 rounded-2xl font-bold text-sm border-2 border-dashed border-indigo-200 flex items-center justify-center gap-3 hover:bg-indigo-100 transition-colors"
+            >
+              <i className="fa-solid fa-wand-magic-sparkles"></i>
+              Importar do mês anterior
+            </button>
           </div>
         )}
       </div>

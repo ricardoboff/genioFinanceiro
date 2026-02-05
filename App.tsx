@@ -61,8 +61,13 @@ const App: React.FC = () => {
     const email = `${username}@genio.app`;
     try {
       await signInWithEmailAndPassword(auth, email, pass);
-    } catch (e) {
-      alert("Usuário ou senha incorretos.");
+    } catch (e: any) {
+      console.error(e);
+      let msg = "Erro ao entrar. Verifique usuário e senha.";
+      if (e.code === 'auth/invalid-api-key') msg = "Configuração do Firebase inválida (API Key).";
+      if (e.code === 'auth/user-not-found') msg = "Usuário não encontrado.";
+      if (e.code === 'auth/wrong-password') msg = "Senha incorreta.";
+      alert(msg);
     }
   };
 
@@ -80,8 +85,13 @@ const App: React.FC = () => {
       };
       await storageService.saveProfile(profile);
       setIsRegistering(false);
-    } catch (e) {
-      alert("Erro ao cadastrar usuário.");
+    } catch (e: any) {
+      console.error(e);
+      let msg = "Erro ao cadastrar usuário.";
+      if (e.code === 'auth/weak-password') msg = "A senha deve ter pelo menos 6 caracteres.";
+      if (e.code === 'auth/email-already-in-use') msg = "Este nome de usuário já está em uso.";
+      if (e.code === 'auth/invalid-api-key') msg = "Configuração do Firebase inválida no código.";
+      alert(msg + "\nDetalles: " + e.message);
     }
   };
 

@@ -32,13 +32,16 @@ const App: React.FC = () => {
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [isLoading, setIsLoading] = useState(true);
 
-  // Monitor de Autenticação
   useEffect(() => {
     const unsubAuth = onAuthStateChanged(auth, async (user) => {
       if (user) {
         setCurrentUser(user);
-        const profile = await storageService.getProfile(user.uid);
-        setUserProfile(profile);
+        try {
+          const profile = await storageService.getProfile(user.uid);
+          setUserProfile(profile);
+        } catch (err) {
+          console.error("Erro ao carregar perfil:", err);
+        }
       } else {
         setCurrentUser(null);
         setUserProfile(null);
@@ -48,13 +51,16 @@ const App: React.FC = () => {
     return () => unsubAuth();
   }, []);
 
-  // Monitor de Transações (Apenas se logado)
   useEffect(() => {
     if (!currentUser) return;
-    const unsub = storageService.subscribeTransactions(currentUser.uid, (data) => {
-      setTransactions(data);
-    });
-    return () => unsub();
+    try {
+      const unsub = storageService.subscribeTransactions(currentUser.uid, (data) => {
+        setTransactions(data);
+      });
+      return () => unsub();
+    } catch (err) {
+      console.error("Erro na inscrição de transações:", err);
+    }
   }, [currentUser]);
 
   const handleLogin = async (username: string, pass: string) => {
@@ -64,7 +70,7 @@ const App: React.FC = () => {
     } catch (e: any) {
       console.error(e);
       let msg = "Erro ao entrar. Verifique usuário e senha.";
-      if (e.code === 'auth/invalid-api-key') msg = "Configuração do Firebase inválida (API Key).";
+      if (e.code === 'auth/invalid-api-key' || e.code === 'auth/invalid-config') msg = "Chave de API do Firebase não configurada ou inválida.";
       if (e.code === 'auth/user-not-found') msg = "Usuário não encontrado.";
       if (e.code === 'auth/wrong-password') msg = "Senha incorreta.";
       alert(msg);
@@ -90,42 +96,26 @@ const App: React.FC = () => {
       let msg = "Erro ao cadastrar usuário.";
       if (e.code === 'auth/weak-password') msg = "A senha deve ter pelo menos 6 caracteres.";
       if (e.code === 'auth/email-already-in-use') msg = "Este nome de usuário já está em uso.";
-      if (e.code === 'auth/invalid-api-key') msg = "Configuração do Firebase inválida no código.";
-      alert(msg + "\nDetalles: " + e.message);
-    }
-  };
-
-  const handleChangePassword = async (newPass: string) => {
-    if (!auth.currentUser) return;
-    try {
-      await updatePassword(auth.currentUser, newPass);
-      await storageService.updateProfile(auth.currentUser.uid, { passwordDisplay: newPass });
-      alert("Senha alterada com sucesso!");
-    } catch (e) {
-      alert("Erro ao alterar senha. Tente fazer login novamente.");
-    }
-  };
-
-  const handleDeleteAccount = async () => {
-    if (!auth.currentUser || !confirm("Tem certeza que deseja excluir sua conta permanentemente?")) return;
-    try {
-      const uid = auth.currentUser.uid;
-      await storageService.deleteProfile(uid);
-      await deleteUser(auth.currentUser);
-      alert("Conta excluída.");
-    } catch (e) {
-      alert("Erro ao excluir conta. Faça login novamente e tente de novo.");
+      alert(msg + "\n" + (e.message || ""));
     }
   };
 
   const handleAddTransaction = async (t: Transaction) => {
     if (!currentUser) return;
     const { id, ...data } = t;
-    await storageService.addTransaction({ ...data, uid: currentUser.uid });
-    setIsFormOpen(false);
+    try {
+      await storageService.addTransaction({ ...data, uid: currentUser.uid });
+      setIsFormOpen(false);
+    } catch (e: any) {
+      console.error("Erro ao salvar transação:", e);
+      let msg = "Não foi possível salvar a transação.";
+      if (e.message?.includes("permission-denied")) {
+        msg += "\nErro de permissão no Firestore. Verifique suas regras de segurança.";
+      }
+      alert(msg + "\nErro: " + e.code);
+    }
   };
 
-  // Filtragem mensal
   const filteredTransactions = useMemo(() => {
     return transactions.filter(t => {
       const d = new Date(t.date);
@@ -150,8 +140,8 @@ const App: React.FC = () => {
       <header className="bg-indigo-600 text-white p-6 pb-12 rounded-b-[2.5rem]">
         <div className="flex justify-between items-center mb-6">
           <div className="flex flex-col">
-            <h1 className="text-xl font-bold">Olá, {userProfile?.nome.split(' ')[0]}</h1>
-            <span className="text-[10px] text-indigo-200">@{userProfile?.username}</span>
+            <h1 className="text-xl font-bold">Olá, {userProfile?.nome.split(' ')[0] || 'Gênio'}</h1>
+            <span className="text-[10px] text-indigo-200">@{userProfile?.username || 'user'}</span>
           </div>
           <button onClick={() => setView('profile')} className="w-10 h-10 bg-white/20 rounded-full flex items-center justify-center">
             <i className="fa-solid fa-user"></i>
@@ -176,8 +166,22 @@ const App: React.FC = () => {
           <ProfileMenu 
             user={userProfile!} 
             onLogout={() => signOut(auth)} 
-            onChangePass={handleChangePassword} 
-            onDelete={handleDeleteAccount} 
+            onChangePass={async (p) => {
+                if (!auth.currentUser) return;
+                try {
+                  await updatePassword(auth.currentUser, p);
+                  await storageService.updateProfile(auth.currentUser.uid, { passwordDisplay: p });
+                  alert("Senha alterada!");
+                } catch(err) { alert("Erro ao alterar. Logue novamente."); }
+            }} 
+            onDelete={async () => {
+                if (!auth.currentUser) return;
+                try {
+                  const uid = auth.currentUser.uid;
+                  await storageService.deleteProfile(uid);
+                  await deleteUser(auth.currentUser);
+                } catch(err) { alert("Erro ao excluir."); }
+            }} 
           />
         )}
       </main>
@@ -222,9 +226,9 @@ const ProfileMenu: React.FC<{ user: UserProfile, onLogout: () => void, onChangeP
   <div className="pt-6 space-y-4">
     <div className="bg-white p-6 rounded-3xl shadow-sm border border-slate-100">
       <h3 className="font-bold text-slate-800 mb-4">Sua Conta</h3>
-      <p className="text-sm text-slate-500 mb-1">Nome: {user.nome}</p>
-      <p className="text-sm text-slate-500 mb-1">Usuário: @{user.username}</p>
-      <p className="text-sm text-slate-500 mb-6">WhatsApp: {user.telefone}</p>
+      <p className="text-sm text-slate-500 mb-1">Nome: {user?.nome}</p>
+      <p className="text-sm text-slate-500 mb-1">Usuário: @{user?.username}</p>
+      <p className="text-sm text-slate-500 mb-6">WhatsApp: {user?.telefone}</p>
       
       <div className="space-y-2">
         <button onClick={() => {

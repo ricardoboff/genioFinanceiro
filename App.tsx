@@ -3,6 +3,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { Transaction, TransactionType, View, UserProfile } from './types';
 import { storageService } from './services/storageService';
 import { auth } from './services/firebaseConfig';
+// Fix: Correct modular imports for Firebase Auth functions to ensure visibility.
 import { 
   signInWithEmailAndPassword, 
   createUserWithEmailAndPassword, 
@@ -117,10 +118,14 @@ const App: React.FC = () => {
   };
 
   const filteredTransactions = useMemo(() => {
-    return transactions.filter(t => {
+    // 1. Filtrar pelo mês e ano selecionados
+    const filtered = transactions.filter(t => {
       const d = new Date(t.date);
       return d.getMonth() === selectedDate.getMonth() && d.getFullYear() === selectedDate.getFullYear();
     });
+
+    // 2. Ordenar por data (mais recente primeiro) no lado do cliente
+    return filtered.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
   }, [transactions, selectedDate]);
 
   if (isLoading) return <LoadingScreen />;

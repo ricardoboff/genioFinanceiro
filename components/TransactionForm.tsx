@@ -13,24 +13,22 @@ const TransactionForm: React.FC<Props> = ({ onAdd, onClose, selectedDate }) => {
   const [description, setDescription] = useState('');
   const [amount, setAmount] = useState('');
   const [category, setCategory] = useState(CATEGORIES[0]);
+  
+  // Inicializa a data com hoje no formato YYYY-MM-DD para o input
+  const today = new Date();
+  const [dateStr, setDateStr] = useState(today.toISOString().split('T')[0]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!description || !amount) return;
+    if (!description || !amount || !dateStr) return;
 
-    // Se o dia de hoje for no mês selecionado, usa a hora exata. 
-    // Senão, usa o primeiro dia do mês selecionado.
-    const now = new Date();
-    let transactionDate: Date;
-    
-    if (now.getMonth() === selectedDate.getMonth() && now.getFullYear() === selectedDate.getFullYear()) {
-      transactionDate = now;
-    } else {
-      transactionDate = new Date(selectedDate.getFullYear(), selectedDate.getMonth(), 1, 12, 0, 0);
-    }
+    // Converte a string YYYY-MM-DD para um objeto Date
+    // Usamos o meio do dia para evitar problemas de fuso horário na conversão
+    const [year, month, day] = dateStr.split('-').map(Number);
+    const transactionDate = new Date(year, month - 1, day, 12, 0, 0);
 
     const newTransaction: Transaction = {
-      id: Math.random().toString(36).substr(2, 9),
+      id: '', // O Firestore gera o ID
       description,
       amount: parseFloat(amount.replace(',', '.')),
       date: transactionDate.toISOString(),
@@ -57,7 +55,7 @@ const TransactionForm: React.FC<Props> = ({ onAdd, onClose, selectedDate }) => {
           </button>
         </div>
 
-        <form onSubmit={handleSubmit} className="space-y-6">
+        <form onSubmit={handleSubmit} className="space-y-5 overflow-y-auto max-h-[80vh] pb-4">
           {/* Type Toggle */}
           <div className="flex bg-slate-100 p-1.5 rounded-2xl">
             <button
@@ -76,17 +74,28 @@ const TransactionForm: React.FC<Props> = ({ onAdd, onClose, selectedDate }) => {
             </button>
           </div>
 
-          <div>
-            <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2 px-1">Valor (R$)</label>
-            <input 
-              type="text" 
-              inputMode="decimal"
-              value={amount}
-              onChange={(e) => setAmount(e.target.value)}
-              placeholder="0,00"
-              className="w-full text-4xl font-bold text-slate-800 bg-transparent border-b-2 border-slate-100 focus:border-indigo-500 focus:outline-none py-2 placeholder:text-slate-200"
-              autoFocus
-            />
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2 px-1">Valor (R$)</label>
+              <input 
+                type="text" 
+                inputMode="decimal"
+                value={amount}
+                onChange={(e) => setAmount(e.target.value)}
+                placeholder="0,00"
+                className="w-full text-2xl font-bold text-slate-800 bg-slate-50 border border-slate-100 rounded-2xl p-4 focus:border-indigo-500 focus:outline-none placeholder:text-slate-200"
+                autoFocus
+              />
+            </div>
+            <div>
+              <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2 px-1">Data</label>
+              <input 
+                type="date" 
+                value={dateStr}
+                onChange={(e) => setDateStr(e.target.value)}
+                className="w-full p-4 bg-slate-50 border border-slate-100 rounded-2xl focus:bg-white focus:ring-2 focus:ring-indigo-500 focus:outline-none transition-all text-sm"
+              />
+            </div>
           </div>
 
           <div>

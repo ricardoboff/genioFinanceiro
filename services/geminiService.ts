@@ -2,26 +2,15 @@
 import { GoogleGenAI } from "@google/genai";
 import { Transaction } from "../types";
 
-// Função para obter a instância da IA com segurança
-const getAIInstance = () => {
-  const apiKey = process.env.API_KEY;
-  if (!apiKey) {
-    console.warn("Atenção: API_KEY não configurada nas variáveis de ambiente.");
-    return null;
-  }
-  try {
-    return new GoogleGenAI({ apiKey });
-  } catch (e) {
-    console.error("Erro ao inicializar GoogleGenAI:", e);
-    return null;
-  }
-};
-
+/**
+ * Fornece conselhos financeiros baseados nas transações do usuário.
+ * Segue as diretrizes da API Gemini 3.
+ */
 export const getFinancialAdvice = async (transactions: Transaction[]) => {
-  const ai = getAIInstance();
-  
-  if (!ai) {
-    return "O assistente de IA está temporariamente indisponível. Verifique se a API_KEY foi configurada corretamente nas configurações do seu deploy (Vercel/Firebase).";
+  // Sempre use process.env.API_KEY diretamente.
+  if (!process.env.API_KEY) {
+    console.warn("Atenção: API_KEY não configurada.");
+    return "O assistente de IA está temporariamente indisponível. Verifique as configurações da API.";
   }
 
   if (transactions.length === 0) {
@@ -43,10 +32,16 @@ export const getFinancialAdvice = async (transactions: Transaction[]) => {
   `;
 
   try {
+    // Instancia o SDK logo antes da chamada, conforme diretrizes.
+    const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+    
     const response = await ai.models.generateContent({
-      model: 'gemini-3-flash-preview',
+      // Usando gemini-3-pro-preview para tarefas de análise complexa.
+      model: 'gemini-3-pro-preview',
       contents: prompt,
     });
+
+    // A propriedade .text retorna a string diretamente (não é um método).
     return response.text;
   } catch (error) {
     console.error("Erro ao obter conselhos da IA:", error);

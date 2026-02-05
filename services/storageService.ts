@@ -8,7 +8,6 @@ import {
   doc, 
   query, 
   where,
-  orderBy, 
   onSnapshot,
   setDoc,
   getDoc,
@@ -23,10 +22,10 @@ export const storageService = {
   // Transações
   subscribeTransactions: (uid: string, callback: (transactions: Transaction[]) => void) => {
     try {
+      // Removido o orderBy para não exigir a criação manual de índices compostos no console do Firebase
       const q = query(
         collection(db, TRANSACTIONS_COL), 
-        where('uid', '==', uid),
-        orderBy('date', 'desc')
+        where('uid', '==', uid)
       );
       return onSnapshot(q, (snapshot) => {
         const transactions = snapshot.docs.map(doc => ({

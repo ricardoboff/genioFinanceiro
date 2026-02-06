@@ -1,7 +1,6 @@
-
 import { initializeApp } from "firebase/app";
 import { getFirestore } from "firebase/firestore";
-// Fix: Consolidating modular auth imports to ensure they are correctly exported and resolved
+// Use named imports for Firebase Auth as required by the modular SDK (v9+).
 import { 
   getAuth, 
   signInWithEmailAndPassword, 
@@ -20,10 +19,12 @@ const firebaseConfig = {
 };
 
 const app = initializeApp(firebaseConfig);
+
+// Initialize Firestore and Auth instances following modular patterns.
 export const db = getFirestore(app);
 export const auth = getAuth(app);
 
-// Fix: Exporting auth methods directly from the config to bypass potential "no exported member" issues in other files
+// Re-exporting functions for use in components to maintain modular architecture.
 export { 
   signInWithEmailAndPassword, 
   createUserWithEmailAndPassword, 

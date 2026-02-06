@@ -1,4 +1,5 @@
-import { GoogleGenAI, GenerateContentResponse, Type } from "@google/genai";
+import { GoogleGenAI } from "@google/genai";
+import { GenerateContentResponse, Type } from "@google/genai";
 import { Transaction } from "../types";
 
 /**

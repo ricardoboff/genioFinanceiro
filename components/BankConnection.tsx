@@ -17,10 +17,18 @@ const ALL_INSTITUTIONS = [
   { name: 'Santander', color: 'bg-red-700', hex: '#ec0000', icon: 'fa-s' }
 ];
 
+// Helper para gerar datas no mês atual para que o saldo apareça no dashboard
+const getMonthDate = (day: string) => {
+  const now = new Date();
+  const month = String(now.getMonth() + 1).padStart(2, '0');
+  const year = now.getFullYear();
+  return `${day}/${month}/${year}`;
+};
+
 const MOCK_RAW_STATEMENTS: Record<string, string> = {
-  'Nubank': "01/10 COMPRA DEBITO 3422 UBER* TRIP R$ 25,90 | 02/10 RECEBIMENTO PIX SALARIO EMPRESA X R$ 4500,00 | 05/10 PAGAMENTO BOLETO ENEL DISTR R$ 180,50",
-  'Itaú': "EXTRATO 10/10 - DEB. AUTOMATICO NETFLIX COM BR R$ 55,90 | 11/10 CREDITO TED JOAO SILVA R$ 150,00 | 12/10 COMPRA IFOOD *RESTAURANTE R$ 89,00",
-  'Sicoob': "MOVIMENTACAO: 15/10 - SAQUE TERMINAL 001 R$ 100,00 | 16/10 - COMPRA POSTO IPIRANGA R$ 250,00 | 17/10 - RENDIMENTO APLICACAO R$ 12,40"
+  'Nubank': `${getMonthDate('01')} COMPRA DEBITO 3422 UBER* TRIP R$ 25,90 | ${getMonthDate('02')} RECEBIMENTO PIX SALARIO EMPRESA X R$ 4500,00 | ${getMonthDate('05')} PAGAMENTO BOLETO ENEL DISTR R$ 180,50`,
+  'Itaú': `${getMonthDate('10')} EXTRATO - DEB. AUTOMATICO NETFLIX COM BR R$ 55,90 | ${getMonthDate('11')} CREDITO TED JOAO SILVA R$ 150,00 | ${getMonthDate('12')} COMPRA IFOOD *RESTAURANTE R$ 89,00`,
+  'Sicoob': `${getMonthDate('15')} MOVIMENTACAO: SAQUE TERMINAL 001 R$ 100,00 | ${getMonthDate('16')} COMPRA POSTO IPIRANGA R$ 250,00 | ${getMonthDate('17')} RENDIMENTO APLICACAO R$ 12,40`
 };
 
 type ConnectionStep = 'list' | 'cpf' | 'redirecting' | 'bank_login' | 'syncing';
@@ -34,9 +42,10 @@ const BankConnection: React.FC<Props> = ({ accounts, onConnect, onSync }) => {
 
   const filteredBanks = useMemo(() => {
     return ALL_INSTITUTIONS.filter(bank => 
-      bank.name.toLowerCase().includes(searchTerm.toLowerCase())
+      bank.name.toLowerCase().includes(searchTerm.toLowerCase()) &&
+      !accounts.some(acc => acc.institution === bank.name)
     );
-  }, [searchTerm]);
+  }, [searchTerm, accounts]);
 
   const handleStartConnection = (bank: typeof ALL_INSTITUTIONS[0]) => {
     setSelectedBank(bank);
@@ -63,12 +72,12 @@ const BankConnection: React.FC<Props> = ({ accounts, onConnect, onSync }) => {
   };
 
   return (
-    <div className="space-y-6 pt-4 h-full">
+    <div className="space-y-6 pt-4 pb-24">
       {step === 'list' && (
         <>
-          <div className="flex justify-between items-center">
+          <div className="flex justify-between items-center px-1">
             <div>
-              <h2 className="text-xl font-bold text-slate-800">Conectar Bancos</h2>
+              <h2 className="text-xl font-bold text-slate-800">Minhas Contas</h2>
               <p className="text-[10px] text-emerald-500 font-black uppercase tracking-widest">Open Finance Ativo</p>
             </div>
             <div className="w-10 h-10 bg-emerald-50 text-emerald-500 rounded-full flex items-center justify-center">
@@ -76,23 +85,53 @@ const BankConnection: React.FC<Props> = ({ accounts, onConnect, onSync }) => {
             </div>
           </div>
 
-          <div className="bg-slate-900 rounded-[2.5rem] p-6 text-white shadow-xl relative overflow-hidden">
-            <div className="absolute top-0 right-0 p-4 opacity-10">
-              <i className="fa-solid fa-building-columns text-6xl"></i>
+          {/* Seção de Contas Conectadas */}
+          {accounts.length > 0 ? (
+            <div className="space-y-3">
+              {accounts.map(acc => {
+                const bankInfo = ALL_INSTITUTIONS.find(i => i.name === acc.institution);
+                return (
+                  <div key={acc.id} className="bg-white p-5 rounded-[2rem] border border-slate-100 shadow-sm flex items-center justify-between">
+                    <div className="flex items-center gap-4">
+                      <div className={`w-12 h-12 rounded-2xl ${bankInfo?.color || 'bg-slate-400'} flex items-center justify-center text-white text-xl shadow-inner`}>
+                        <i className={`fa-solid ${bankInfo?.icon || 'fa-building-columns'}`}></i>
+                      </div>
+                      <div>
+                        <p className="text-sm font-bold text-slate-800">{acc.institution}</p>
+                        <p className="text-[10px] text-slate-400 font-medium">Sincronizado {new Date(acc.lastSync).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}</p>
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <p className={`text-sm font-black ${acc.balance >= 0 ? 'text-emerald-600' : 'text-rose-600'}`}>
+                        R$ {acc.balance.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                      </p>
+                      <button onClick={() => onSync(acc.id)} className="text-[9px] font-bold text-indigo-500 uppercase tracking-widest mt-1">
+                        Sincronizar <i className="fa-solid fa-rotate ml-1"></i>
+                      </button>
+                    </div>
+                  </div>
+                );
+              })}
             </div>
-            <h3 className="font-bold text-sm mb-2">Segurança em primeiro lugar</h3>
-            <p className="text-[11px] text-slate-400 leading-relaxed mb-4">
-              Seus dados são criptografados. Nós nunca pedimos ou armazenamos sua senha do banco.
-            </p>
-            <div className="flex items-center gap-2 text-[10px] text-emerald-400 font-bold">
-              <i className="fa-solid fa-lock"></i>
-              CONEXÃO PADRÃO BACEN
+          ) : (
+            <div className="bg-slate-900 rounded-[2.5rem] p-6 text-white shadow-xl relative overflow-hidden">
+              <div className="absolute top-0 right-0 p-4 opacity-10">
+                <i className="fa-solid fa-building-columns text-6xl"></i>
+              </div>
+              <h3 className="font-bold text-sm mb-2">Segurança em primeiro lugar</h3>
+              <p className="text-[11px] text-slate-400 leading-relaxed mb-4">
+                Seus dados são criptografados. Nós nunca pedimos ou armazenamos sua senha do banco.
+              </p>
+              <div className="flex items-center gap-2 text-[10px] text-emerald-400 font-bold">
+                <i className="fa-solid fa-lock"></i>
+                CONEXÃO PADRÃO BACEN
+              </div>
             </div>
-          </div>
+          )}
 
           <div className="space-y-4">
-            <h4 className="text-[10px] font-bold text-slate-400 uppercase tracking-widest px-1">Selecione seu banco</h4>
-            <div className="grid grid-cols-1 gap-3 pb-24">
+            <h4 className="text-[10px] font-bold text-slate-400 uppercase tracking-widest px-1">Conectar novo banco</h4>
+            <div className="grid grid-cols-1 gap-3">
               {filteredBanks.map(bank => (
                 <button 
                   key={bank.name}
@@ -108,25 +147,11 @@ const BankConnection: React.FC<Props> = ({ accounts, onConnect, onSync }) => {
                       <span className="text-[9px] text-slate-400 font-medium">Disponível via Open Finance</span>
                     </div>
                   </div>
-                  <i className="fa-solid fa-chevron-right text-[10px] text-slate-200 group-hover:text-indigo-500 transition-colors"></i>
+                  <i className="fa-solid fa-plus text-[12px] text-slate-200 group-hover:text-indigo-500 transition-colors"></i>
                 </button>
               ))}
             </div>
           </div>
-          
-          {accounts.length > 0 && (
-             <div className="fixed bottom-24 left-4 right-4 bg-white/80 backdrop-blur-lg border border-slate-100 p-4 rounded-3xl shadow-lg flex items-center justify-between">
-                <div className="flex -space-x-2">
-                   {accounts.map(a => (
-                     <div key={a.id} className={`w-8 h-8 rounded-full border-2 border-white ${ALL_INSTITUTIONS.find(i => i.name === a.institution)?.color || 'bg-slate-400'} flex items-center justify-center text-[10px] text-white font-bold`}>
-                       {a.institution[0]}
-                     </div>
-                   ))}
-                </div>
-                <p className="text-[10px] font-bold text-slate-500 uppercase">{accounts.length} CONTAS ATIVAS</p>
-                <i className="fa-solid fa-check-circle text-emerald-500"></i>
-             </div>
-          )}
         </>
       )}
 
@@ -165,7 +190,7 @@ const BankConnection: React.FC<Props> = ({ accounts, onConnect, onSync }) => {
                 </button>
               </div>
            </div>
-           <p className="text-center text-[10px] text-slate-300 font-medium">Seus dados são protegidos pela Lei Geral de Proteção de Dados (LGPD)</p>
+           <p className="text-center text-[10px] text-slate-300 font-medium pb-8">Seus dados são protegidos pela Lei Geral de Proteção de Dados (LGPD)</p>
         </div>
       )}
 

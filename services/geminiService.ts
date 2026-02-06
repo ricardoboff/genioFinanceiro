@@ -1,5 +1,5 @@
 
-import { GoogleGenAI } from "@google/genai";
+import { GoogleGenAI, GenerateContentResponse } from "@google/genai";
 import { Transaction } from "../types";
 
 /**
@@ -24,8 +24,8 @@ export const getFinancialAdvice = async (transactions: Transaction[]) => {
     // Instancia o SDK logo antes da chamada para garantir o uso da chave mais recente do ambiente.
     const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
     
-    // Fix: Using systemInstruction for role definition as recommended for Gemini 3 models.
-    const response = await ai.models.generateContent({
+    // Fix: Using ai.models.generateContent with 'gemini-3-flash-preview' and systemInstruction for optimal text results.
+    const response: GenerateContentResponse = await ai.models.generateContent({
       model: 'gemini-3-flash-preview',
       contents: `Aqui estão minhas transações recentes:\n\n${transactionSummary}`,
       config: {
@@ -33,7 +33,7 @@ export const getFinancialAdvice = async (transactions: Transaction[]) => {
       }
     });
 
-    // Fix: Accessing .text property directly (not a method).
+    // Fix: Accessing .text property directly (not a method) from GenerateContentResponse.
     return response.text;
   } catch (error) {
     console.error("Erro ao obter conselhos da IA:", error);

@@ -107,24 +107,24 @@ const App: React.FC = () => {
     }
   };
 
-  const handleConnectBank = (institution: string) => {
+  const handleConnectBank = (institution: string, balance: number) => {
     const newAcc: BankAccount = {
       id: Math.random().toString(36).substr(2, 9),
       institution,
       lastSync: new Date().toISOString(),
       status: 'active',
-      balance: Math.random() * 5000
+      balance: balance
     };
     setBankAccounts([...bankAccounts, newAcc]);
     
-    // Simular importação de transações via Open Finance
+    // Simular importação de uma transação real para testar o sistema
     const mockTrans: Transaction = {
       id: '',
-      description: `Compra Automatizada ${institution}`,
-      amount: 45.90,
+      description: `Sincronização ${institution}`,
+      amount: 0,
       date: new Date().toISOString(),
-      category: 'Alimentação',
-      type: TransactionType.EXPENSE,
+      category: 'Outros',
+      type: TransactionType.INCOME,
       automated: true,
       institution
     };
@@ -135,7 +135,7 @@ const App: React.FC = () => {
     setBankAccounts(prev => prev.map(acc => 
       acc.id === id ? { ...acc, lastSync: new Date().toISOString() } : acc
     ));
-    alert("Sincronização concluída! Novos lançamentos importados.");
+    alert("Sincronização concluída! Saldo atualizado com a base de dados.");
   };
 
   const sortedTransactions = useMemo(() => {

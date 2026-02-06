@@ -11,7 +11,17 @@ export interface Transaction {
   date: string;
   category: string;
   type: TransactionType;
-  uid?: string; // Vinculação com o usuário
+  uid?: string;
+  automated?: boolean; // Indica se veio do Open Finance
+  institution?: string; // Nome do banco de origem
+}
+
+export interface BankAccount {
+  id: string;
+  institution: string;
+  lastSync: string;
+  status: 'active' | 'error' | 'syncing';
+  balance: number;
 }
 
 export interface UserProfile {
@@ -19,11 +29,11 @@ export interface UserProfile {
   nome: string;
   telefone: string;
   username: string;
-  passwordDisplay: string; // Apenas para o requisito de enviar a senha via WhatsApp
+  passwordDisplay: string;
   isAdmin: boolean;
 }
 
-export type View = 'dashboard' | 'transactions' | 'analytics' | 'ai' | 'admin' | 'profile';
+export type View = 'dashboard' | 'transactions' | 'analytics' | 'ai' | 'admin' | 'profile' | 'banks';
 
 export const CATEGORIES = [
   'Alimentação',

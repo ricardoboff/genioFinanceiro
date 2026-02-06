@@ -7,10 +7,9 @@ import { Transaction } from "../types";
  * Segue as diretrizes da API Gemini 3.
  */
 export const getFinancialAdvice = async (transactions: Transaction[]) => {
-  // Sempre use process.env.API_KEY diretamente.
+  // Sempre use process.env.API_KEY diretamente conforme as diretrizes.
   if (!process.env.API_KEY) {
-    console.warn("Atenção: API_KEY não configurada.");
-    return "O assistente de IA está temporariamente indisponível. Verifique as configurações da API.";
+    return "O assistente de IA está temporariamente indisponível.";
   }
 
   if (transactions.length === 0) {
@@ -21,30 +20,23 @@ export const getFinancialAdvice = async (transactions: Transaction[]) => {
     `${t.date}: ${t.description} - R$${t.amount} (${t.category})`
   ).join('\n');
 
-  const prompt = `
-    Como um consultor financeiro pessoal experiente, analise as seguintes transações recentes do usuário e forneça 3 dicas práticas para melhorar sua saúde financeira. 
-    Seja amigável, direto e use o contexto dos gastos.
-    
-    Transações:
-    ${transactionSummary}
-    
-    Responda em formato Markdown curto.
-  `;
-
   try {
-    // Instancia o SDK logo antes da chamada, conforme diretrizes.
+    // Instancia o SDK logo antes da chamada para garantir o uso da chave mais recente do ambiente.
     const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
     
+    // Fix: Using systemInstruction for role definition as recommended for Gemini 3 models.
     const response = await ai.models.generateContent({
-      // Usando gemini-3-pro-preview para tarefas de análise complexa.
-      model: 'gemini-3-pro-preview',
-      contents: prompt,
+      model: 'gemini-3-flash-preview',
+      contents: `Aqui estão minhas transações recentes:\n\n${transactionSummary}`,
+      config: {
+        systemInstruction: "Você é um consultor financeiro pessoal experiente. Analise as transações fornecidas pelo usuário e dê exatamente 3 conselhos práticos e curtos para melhorar sua saúde financeira. Seja amigável e direto. Use Markdown.",
+      }
     });
 
-    // A propriedade .text retorna a string diretamente (não é um método).
+    // Fix: Accessing .text property directly (not a method).
     return response.text;
   } catch (error) {
     console.error("Erro ao obter conselhos da IA:", error);
-    return "Ops! Tive um problema ao processar seus dados. Verifique sua conexão ou a validade da sua chave de API.";
+    return "Ops! Tive um problema ao processar seus dados financeiros agora.";
   }
 };

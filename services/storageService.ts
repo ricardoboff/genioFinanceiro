@@ -22,11 +22,11 @@ export const storageService = {
   // Transações
   subscribeTransactions: (uid: string, callback: (transactions: Transaction[]) => void) => {
     try {
-      // Removido o orderBy para não exigir a criação manual de índices compostos no console do Firebase
       const q = query(
         collection(db, TRANSACTIONS_COL), 
         where('uid', '==', uid)
       );
+      
       return onSnapshot(q, (snapshot) => {
         const transactions = snapshot.docs.map(doc => ({
           ...doc.data(),
@@ -35,6 +35,9 @@ export const storageService = {
         callback(transactions);
       }, (error) => {
         console.error("Erro no onSnapshot do Firestore:", error);
+        if (error.code === 'permission-denied') {
+          alert("Acesso negado às transações. Verifique as Regras de Segurança do Firebase.");
+        }
       });
     } catch (err) {
       console.error("Erro ao inscrever transações:", err);

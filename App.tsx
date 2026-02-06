@@ -2,7 +2,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { Transaction, TransactionType, View, UserProfile, BankAccount, CATEGORIES } from './types';
 import { storageService } from './services/storageService';
-// Fix: Import auth instance and methods from our local config to avoid module resolution errors
+import { processBankStatement } from './services/geminiService';
 import { 
   auth,
   signInWithEmailAndPassword, 
@@ -34,7 +34,6 @@ const App: React.FC = () => {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    // Escuta mudanças no estado de autenticação via modular SDK.
     const unsubAuth = onAuthStateChanged(auth, async (user) => {
       if (user) {
         setCurrentUser(user);
@@ -63,19 +62,15 @@ const App: React.FC = () => {
     return () => unsub();
   }, [currentUser]);
 
-  // Implementação da lógica de login utilizando modular SDK
   const handleLogin = async (username: string, pass: string) => {
     try {
-      // Como o app usa username, simulamos um e-mail para o Firebase Auth.
       const email = `${username.trim().toLowerCase()}@genio.com`;
       await signInWithEmailAndPassword(auth, email, pass);
     } catch (e: any) {
-      console.error("Erro de login:", e);
       alert("Erro ao entrar: Verifique seu usuário e senha.");
     }
   };
 
-  // Implementação da lógica de registro utilizando modular SDK
   const handleRegister = async (data: any) => {
     try {
       const email = `${data.username.trim().toLowerCase()}@genio.com`;
@@ -91,8 +86,7 @@ const App: React.FC = () => {
       await storageService.saveProfile(profile);
       setUserProfile(profile);
     } catch (e: any) {
-      console.error("Erro de registro:", e);
-      alert("Erro ao cadastrar: " + (e.message || "Verifique os dados e tente novamente."));
+      alert("Erro ao cadastrar.");
     }
   };
 
@@ -103,39 +97,53 @@ const App: React.FC = () => {
       await storageService.addTransaction({ ...data, uid: currentUser.uid });
       setIsFormOpen(false);
     } catch (e: any) {
-      alert("Erro ao salvar transação.");
+      console.error(e);
     }
   };
 
-  const handleConnectBank = (institution: string, balance: number) => {
+  const handleConnectBank = async (institution: string, rawData: string) => {
+    if (!currentUser) return;
+
+    // 1. Usa a IA (Gemini) para processar o extrato bruto recebido do "banco"
+    const extractedTransactions = await processBankStatement(rawData);
+    
+    let totalBalance = 0;
+
+    // 2. Salva cada transação extraída no Firebase
+    for (const t of extractedTransactions) {
+      const amount = t.amount || 0;
+      if (t.type === TransactionType.INCOME) totalBalance += amount;
+      else totalBalance -= amount;
+
+      await handleAddTransaction({
+        id: '',
+        description: t.description || 'Lançamento Bancário',
+        amount: amount,
+        date: t.date || new Date().toISOString(),
+        category: t.category || 'Outros',
+        type: t.type as TransactionType || TransactionType.EXPENSE,
+        automated: true,
+        institution
+      });
+    }
+
+    // 3. Registra a conta no app
     const newAcc: BankAccount = {
       id: Math.random().toString(36).substr(2, 9),
       institution,
       lastSync: new Date().toISOString(),
       status: 'active',
-      balance: balance
+      balance: totalBalance
     };
     setBankAccounts([...bankAccounts, newAcc]);
-    
-    // Simular importação de uma transação real para testar o sistema
-    const mockTrans: Transaction = {
-      id: '',
-      description: `Sincronização ${institution}`,
-      amount: 0,
-      date: new Date().toISOString(),
-      category: 'Outros',
-      type: TransactionType.INCOME,
-      automated: true,
-      institution
-    };
-    handleAddTransaction(mockTrans);
+    setView('transactions'); // Redireciona para ver os novos lançamentos
   };
 
   const handleSyncBank = (id: string) => {
     setBankAccounts(prev => prev.map(acc => 
       acc.id === id ? { ...acc, lastSync: new Date().toISOString() } : acc
     ));
-    alert("Sincronização concluída! Saldo atualizado com a base de dados.");
+    alert("Sincronização concluída!");
   };
 
   const sortedTransactions = useMemo(() => {

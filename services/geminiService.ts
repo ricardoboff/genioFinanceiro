@@ -1,42 +1,77 @@
+import { GoogleGenAI, GenerateContentResponse, Type } from "@google/genai";
+import { Transaction, TransactionType } from "../types";
 
-import { GoogleGenAI, GenerateContentResponse } from "@google/genai";
-import { Transaction } from "../types";
+/**
+ * Usa a IA para processar um extrato bruto do banco e extrair transações estruturadas.
+ */
+export const processBankStatement = async (rawText: string): Promise<Partial<Transaction>[]> => {
+  if (!process.env.API_KEY) return [];
+
+  try {
+    // Inicializa o cliente Gemini API
+    const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+    
+    // Definimos um esquema para garantir que a IA retorne exatamente o que precisamos. 
+    // Usamos gemini-3-pro-preview para tarefas complexas de extração de dados.
+    const response = await ai.models.generateContent({
+      model: 'gemini-3-pro-preview',
+      contents: `Analise este extrato bruto e extraia os lançamentos: \n\n${rawText}`,
+      config: {
+        responseMimeType: "application/json",
+        responseSchema: {
+          type: Type.ARRAY,
+          items: {
+            type: Type.OBJECT,
+            properties: {
+              description: { type: Type.STRING, description: "Nome amigável da transação (ex: Uber, Netflix)" },
+              amount: { type: Type.NUMBER, description: "Valor absoluto da transação" },
+              type: { type: Type.STRING, description: "INCOME para entradas/salário, EXPENSE para saídas/pagamentos" },
+              category: { type: Type.STRING, description: "Categoria: Alimentação, Transporte, Lazer, Saúde, Moradia, Salário, Investimentos ou Outros" },
+              date: { type: Type.STRING, description: "Data aproximada no formato YYYY-MM-DD" }
+            },
+            required: ["description", "amount", "type", "category", "date"]
+          }
+        },
+        systemInstruction: "Você é um especialista em processamento de dados bancários. Extraia informações de textos brutos de extratos (Open Finance). Limpe nomes sujos (remova números de nota fiscal, códigos de terminal). Se o valor for negativo no extrato, classifique como EXPENSE e retorne o valor positivo. Se for positivo, INCOME.",
+      }
+    });
+
+    const jsonStr = response.text?.trim();
+    if (jsonStr) {
+      return JSON.parse(jsonStr);
+    }
+    return [];
+  } catch (error) {
+    console.error("Erro ao processar extrato com IA:", error);
+    return [];
+  }
+};
 
 /**
  * Fornece conselhos financeiros baseados nas transações do usuário.
- * Segue as diretrizes da API Gemini 3.
  */
 export const getFinancialAdvice = async (transactions: Transaction[]) => {
-  // Sempre use process.env.API_KEY diretamente conforme as diretrizes.
-  if (!process.env.API_KEY) {
-    return "O assistente de IA está temporariamente indisponível.";
-  }
-
-  if (transactions.length === 0) {
-    return "Adicione algumas transações para que eu possa analisar seu perfil financeiro!";
-  }
+  if (!process.env.API_KEY) return "O assistente de IA está temporariamente indisponível.";
+  if (transactions.length === 0) return "Adicione algumas transações para análise.";
 
   const transactionSummary = transactions.slice(-20).map(t => 
     `${t.date}: ${t.description} - R$${t.amount} (${t.category})`
   ).join('\n');
 
   try {
-    // Instancia o SDK logo antes da chamada para garantir o uso da chave mais recente do ambiente.
+    // Inicializa o cliente Gemini API antes da chamada
     const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
-    
-    // Fix: Using ai.models.generateContent with 'gemini-3-flash-preview' and systemInstruction for optimal text results.
+    // Usamos gemini-3-pro-preview para análise financeira detalhada
     const response: GenerateContentResponse = await ai.models.generateContent({
-      model: 'gemini-3-flash-preview',
+      model: 'gemini-3-pro-preview',
       contents: `Aqui estão minhas transações recentes:\n\n${transactionSummary}`,
       config: {
-        systemInstruction: "Você é um consultor financeiro pessoal experiente. Analise as transações fornecidas pelo usuário e dê exatamente 3 conselhos práticos e curtos para melhorar sua saúde financeira. Seja amigável e direto. Use Markdown.",
+        systemInstruction: "Você é um consultor financeiro. Dê 3 dicas curtas e práticas baseadas nos gastos do usuário. Use Markdown.",
       }
     });
-
-    // Fix: Accessing .text property directly (not a method) from GenerateContentResponse.
     return response.text;
   } catch (error) {
-    console.error("Erro ao obter conselhos da IA:", error);
-    return "Ops! Tive um problema ao processar seus dados financeiros agora.";
+    console.error("Erro na IA:", error);
+    return "Erro ao processar dicas.";
   }
 };

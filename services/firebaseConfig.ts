@@ -1,7 +1,14 @@
 import { initializeApp } from "firebase/app";
 import { getFirestore } from "firebase/firestore";
-// Fix: Consolidate modular imports to resolve "no exported member" errors in the environment's module resolution
-import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, onAuthStateChanged } from "firebase/auth";
+// Use modular imports for Firebase Auth. 
+// These are the standard exports for Firebase v9+.
+import { 
+  getAuth, 
+  signInWithEmailAndPassword, 
+  createUserWithEmailAndPassword, 
+  signOut, 
+  onAuthStateChanged 
+} from "firebase/auth";
 
 const firebaseConfig = {
   apiKey: "AIzaSyDSHVmQzOzykcHZdAyrIAA4WT9EcKccKP8",

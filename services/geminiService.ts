@@ -1,5 +1,5 @@
 import { GoogleGenAI, GenerateContentResponse, Type } from "@google/genai";
-import { Transaction, TransactionType } from "../types";
+import { Transaction } from "../types";
 
 /**
  * Usa a IA para processar um extrato bruto do banco e extrair transações estruturadas.
@@ -8,10 +8,9 @@ export const processBankStatement = async (rawText: string): Promise<Partial<Tra
   if (!process.env.API_KEY) return [];
 
   try {
-    // Inicializa o cliente Gemini API
+    // Inicializa o cliente Gemini API right before the call
     const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
     
-    // Definimos um esquema para garantir que a IA retorne exatamente o que precisamos. 
     // Usamos gemini-3-pro-preview para tarefas complexas de extração de dados.
     const response = await ai.models.generateContent({
       model: 'gemini-3-pro-preview',
@@ -25,17 +24,19 @@ export const processBankStatement = async (rawText: string): Promise<Partial<Tra
             properties: {
               description: { type: Type.STRING, description: "Nome amigável da transação (ex: Uber, Netflix)" },
               amount: { type: Type.NUMBER, description: "Valor absoluto da transação" },
-              type: { type: Type.STRING, description: "INCOME para entradas/salário, EXPENSE para saídas/pagamentos" },
+              type: { type: Type.STRING, description: "INCOME para entradas, EXPENSE para saídas" },
               category: { type: Type.STRING, description: "Categoria: Alimentação, Transporte, Lazer, Saúde, Moradia, Salário, Investimentos ou Outros" },
               date: { type: Type.STRING, description: "Data aproximada no formato YYYY-MM-DD" }
             },
-            required: ["description", "amount", "type", "category", "date"]
+            required: ["description", "amount", "type", "category", "date"],
+            propertyOrdering: ["description", "amount", "type", "category", "date"]
           }
         },
-        systemInstruction: "Você é um especialista em processamento de dados bancários. Extraia informações de textos brutos de extratos (Open Finance). Limpe nomes sujos (remova números de nota fiscal, códigos de terminal). Se o valor for negativo no extrato, classifique como EXPENSE e retorne o valor positivo. Se for positivo, INCOME.",
+        systemInstruction: "Você é um especialista em processamento de dados bancários. Extraia informações de textos brutos de extratos (Open Finance). Limpe nomes sujos. Se o valor for negativo no extrato, classifique como EXPENSE e retorne o valor positivo. Se for positivo, INCOME.",
       }
     });
 
+    // Access the .text property directly (getter)
     const jsonStr = response.text?.trim();
     if (jsonStr) {
       return JSON.parse(jsonStr);
@@ -59,7 +60,7 @@ export const getFinancialAdvice = async (transactions: Transaction[]) => {
   ).join('\n');
 
   try {
-    // Inicializa o cliente Gemini API antes da chamada
+    // Inicializa o cliente Gemini API right before the call
     const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
     // Usamos gemini-3-pro-preview para análise financeira detalhada
     const response: GenerateContentResponse = await ai.models.generateContent({
@@ -69,7 +70,8 @@ export const getFinancialAdvice = async (transactions: Transaction[]) => {
         systemInstruction: "Você é um consultor financeiro. Dê 3 dicas curtas e práticas baseadas nos gastos do usuário. Use Markdown.",
       }
     });
-    return response.text;
+    // Access the .text property directly
+    return response.text || "Não foi possível gerar dicas no momento.";
   } catch (error) {
     console.error("Erro na IA:", error);
     return "Erro ao processar dicas.";

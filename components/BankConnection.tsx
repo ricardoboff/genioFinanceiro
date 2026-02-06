@@ -29,6 +29,7 @@ const BankConnection: React.FC<Props> = ({ accounts, onConnect, onSync }) => {
   const [step, setStep] = useState<ConnectionStep>('list');
   const [selectedBank, setSelectedBank] = useState<typeof ALL_INSTITUTIONS[0] | null>(null);
   const [cpf, setCpf] = useState('');
+  const [bankPass, setBankPass] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
 
   const filteredBanks = useMemo(() => {
@@ -57,6 +58,7 @@ const BankConnection: React.FC<Props> = ({ accounts, onConnect, onSync }) => {
       setStep('list');
       setSelectedBank(null);
       setCpf('');
+      setBankPass('');
     }, 3500);
   };
 
@@ -185,8 +187,8 @@ const BankConnection: React.FC<Props> = ({ accounts, onConnect, onSync }) => {
       )}
 
       {step === 'bank_login' && (
-        <div className={`fixed inset-0 z-[400] ${selectedBank?.color} flex flex-col animate-slide-up`}>
-           <div className="p-8 pt-16 flex-1 flex flex-col">
+        <div className={`fixed inset-0 z-[400] ${selectedBank?.color} flex flex-col animate-slide-up overflow-y-auto`}>
+           <div className="p-8 pt-16 flex-1 flex flex-col min-h-full">
               <div className="flex justify-between items-center mb-12">
                 <i className={`fa-solid ${selectedBank?.icon} text-4xl text-white`}></i>
                 <div className="bg-white/20 px-3 py-1 rounded-full text-[10px] text-white font-bold tracking-widest uppercase">Ambiente Seguro</div>
@@ -195,29 +197,41 @@ const BankConnection: React.FC<Props> = ({ accounts, onConnect, onSync }) => {
               <h2 className="text-3xl font-black text-white mb-2">Fazer login</h2>
               <p className="text-white/70 text-sm mb-12">Para autorizar o Open Finance para o Gênio Financeiro.</p>
 
-              <div className="space-y-4">
+              <div className="space-y-4 mb-8">
                 <div className="bg-white/10 p-5 rounded-3xl border border-white/20">
-                  <p className="text-[10px] text-white/50 font-bold uppercase mb-1">CPF</p>
-                  <p className="text-white font-bold">{cpf}</p>
+                  <label className="text-[10px] text-white/50 font-bold uppercase mb-1 block">CPF do Titular</label>
+                  <input 
+                    type="tel"
+                    readOnly
+                    value={cpf}
+                    className="w-full bg-transparent text-white font-bold text-lg focus:outline-none"
+                  />
                 </div>
-                <div className="bg-white/10 p-5 rounded-3xl border border-white/20">
-                  <p className="text-[10px] text-white/50 font-bold uppercase mb-1">Senha Eletrônica</p>
-                  <p className="text-white font-bold tracking-[0.5em]">••••••••</p>
+                <div className="bg-white/10 p-5 rounded-3xl border border-white/20 group focus-within:bg-white/20 transition-all">
+                  <label className="text-[10px] text-white/50 font-bold uppercase mb-1 block">Senha Eletrônica</label>
+                  <input 
+                    type="password"
+                    value={bankPass}
+                    onChange={(e) => setBankPass(e.target.value)}
+                    placeholder="Sua senha bancária"
+                    className="w-full bg-transparent text-white font-bold text-lg placeholder:text-white/30 focus:outline-none"
+                  />
                 </div>
               </div>
 
-              <div className="mt-auto pb-12">
-                <div className="bg-white/10 p-6 rounded-[2.5rem] mb-6 border border-white/10">
-                   <p className="text-xs text-white font-bold mb-4">Autorização de Dados:</p>
-                   <ul className="space-y-3">
-                     <li className="flex items-center gap-3 text-[11px] text-white/80">
-                       <i className="fa-solid fa-circle-check text-white"></i> Extratos de 90 dias
-                     </li>
-                     <li className="flex items-center gap-3 text-[11px] text-white/80">
-                       <i className="fa-solid fa-circle-check text-white"></i> Saldos de conta corrente
-                     </li>
-                   </ul>
-                </div>
+              <div className="bg-white/10 p-6 rounded-[2.5rem] mb-8 border border-white/10">
+                 <p className="text-xs text-white font-bold mb-4">Autorização de Dados:</p>
+                 <div className="space-y-3">
+                   <div className="flex items-center gap-3 text-[11px] text-white/80">
+                     <i className="fa-solid fa-circle-check text-white"></i> Extratos de 90 dias
+                   </div>
+                   <div className="flex items-center gap-3 text-[11px] text-white/80">
+                     <i className="fa-solid fa-circle-check text-white"></i> Saldos de conta corrente
+                   </div>
+                 </div>
+              </div>
+
+              <div className="mt-auto space-y-3 pb-8">
                 <button 
                   onClick={handleBankAuth}
                   className="w-full py-5 bg-white text-slate-900 rounded-[2rem] font-bold text-lg shadow-xl active:scale-95 transition-all"

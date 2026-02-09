@@ -113,33 +113,38 @@ const App: React.FC = () => {
       : <Login onLogin={handleLogin} onGoToRegister={() => setIsRegistering(true)} />;
   }
 
-  const monthlyIncome = sortedTransactions.filter(t => t.type === TransactionType.INCOME).reduce((acc, t) => acc + t.amount, 0);
-  const monthlyExpense = sortedTransactions.filter(t => t.type === TransactionType.EXPENSE).reduce((acc, t) => acc + t.amount, 0);
-  const monthlyBalance = monthlyIncome - monthlyExpense;
+  // Cálculos baseados na imagem
+  const income = sortedTransactions.filter(t => t.type === TransactionType.INCOME).reduce((acc, t) => acc + t.amount, 0);
+  const totalInvested = sortedTransactions.filter(t => t.category === 'Investimentos').reduce((acc, t) => acc + t.amount, 0);
+  // Saídas excluindo investimentos (para bater com a lógica da imagem onde são cards separados)
+  const expense = sortedTransactions.filter(t => t.type === TransactionType.EXPENSE && t.category !== 'Investimentos').reduce((acc, t) => acc + t.amount, 0);
+  const balance = income - expense - totalInvested;
+
+  const todayFormatted = new Date().toLocaleDateString('pt-BR', {
+    weekday: 'long',
+    day: 'numeric',
+    month: 'long',
+    year: 'numeric'
+  });
 
   return (
-    <div className="flex flex-col h-screen max-w-md mx-auto bg-white shadow-2xl overflow-hidden relative">
-      <header className="bg-indigo-600 text-white p-6 pb-12 rounded-b-[2.5rem]">
-        <div className="flex justify-between items-center mb-6">
-          <div className="flex flex-col">
-            <h1 className="text-xl font-bold">Olá, {userProfile?.nome.split(' ')[0] || 'Gênio'}</h1>
-            <span className="text-[10px] text-indigo-200">@{userProfile?.username || 'user'}</span>
+    <div className="flex flex-col h-screen max-w-md mx-auto bg-[#1a1c23] shadow-2xl overflow-hidden relative">
+      <header className="p-6 pb-2">
+        <div className="flex justify-between items-start mb-4">
+          <div>
+            <h1 className="text-2xl font-black text-white">Seja Bem Vindo à Central de Controle</h1>
+            <p className="text-slate-400 text-[11px] mt-1 capitalize">{todayFormatted}</p>
           </div>
-          <button onClick={() => setView('profile')} className="w-10 h-10 bg-white/20 rounded-full flex items-center justify-center">
+          <button onClick={() => setView('profile')} className="w-10 h-10 bg-white/10 rounded-xl flex items-center justify-center text-white">
             <i className="fa-solid fa-user"></i>
           </button>
         </div>
         
         <MonthSelector selectedDate={selectedDate} onChange={setSelectedDate} />
-
-        <div className="text-center">
-          <p className="text-indigo-100 text-[10px] uppercase font-bold mb-1">Resultado Mensal</p>
-          <h2 className="text-4xl font-black">R$ {monthlyBalance.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</h2>
-        </div>
       </header>
 
-      <main className="flex-1 overflow-y-auto px-4 -mt-6 bg-[#f8fafc] rounded-t-3xl pb-24">
-        {view === 'dashboard' && <Dashboard transactions={sortedTransactions} income={monthlyIncome} expense={monthlyExpense} />}
+      <main className="flex-1 overflow-y-auto px-4 bg-[#f8fafc] rounded-t-[2.5rem] pb-24">
+        {view === 'dashboard' && <Dashboard transactions={sortedTransactions} income={income} expense={expense} invested={totalInvested} balance={balance} />}
         {view === 'transactions' && <TransactionList transactions={sortedTransactions} onDelete={(id) => storageService.deleteTransaction(id)} onImportPrevious={() => {}} />}
         {view === 'ai' && <AIAssistant transactions={sortedTransactions} />}
         {view === 'admin' && userProfile?.isAdmin && <AdminPanel />}
@@ -152,20 +157,20 @@ const App: React.FC = () => {
                </button>
              </div>
              <div className="text-center px-6">
-                <p className="text-[10px] text-slate-400">Gênio Financeiro v1.2 • Todos os dados são armazenados de forma segura e privada.</p>
+                <p className="text-[10px] text-slate-400">Gênio Financeiro v2.0 • Inspirado na Central de Controle</p>
              </div>
           </div>
         )}
       </main>
 
-      <button onClick={() => setIsFormOpen(true)} className="absolute bottom-24 right-6 w-14 h-14 bg-indigo-600 text-white rounded-full shadow-lg z-40">
+      <button onClick={() => setIsFormOpen(true)} className="absolute bottom-24 right-6 w-14 h-14 bg-[#1a1c23] text-white rounded-full shadow-lg z-40 border-2 border-white/10">
         <i className="fa-solid fa-plus text-xl"></i>
       </button>
 
       <nav className="bg-white border-t flex justify-around py-3 safe-area-bottom z-50">
-        <NavItem icon="fa-house" label="Resumo" active={view === 'dashboard'} onClick={() => setView('dashboard')} />
-        <NavItem icon="fa-list-ul" label="Diário" active={view === 'transactions'} onClick={() => setView('transactions')} />
-        <NavItem icon="fa-robot" label="Gênio" active={view === 'ai'} onClick={() => setView('ai')} />
+        <NavItem icon="fa-chart-line" label="Dashboard" active={view === 'dashboard'} onClick={() => setView('dashboard')} />
+        <NavItem icon="fa-list-check" label="Lançamentos" active={view === 'transactions'} onClick={() => setView('transactions')} />
+        <NavItem icon="fa-wand-magic-sparkles" label="Gênio" active={view === 'ai'} onClick={() => setView('ai')} />
       </nav>
 
       {isFormOpen && <TransactionForm selectedDate={selectedDate} onAdd={handleAddTransaction} onClose={() => setIsFormOpen(false)} />}
@@ -174,17 +179,17 @@ const App: React.FC = () => {
 };
 
 const NavItem: React.FC<{ icon: string; label: string; active: boolean; onClick: () => void }> = ({ icon, label, active, onClick }) => (
-  <button onClick={onClick} className={`flex flex-col items-center gap-1 ${active ? 'text-indigo-600' : 'text-slate-400'}`}>
+  <button onClick={onClick} className={`flex flex-col items-center gap-1 ${active ? 'text-[#1a1c23]' : 'text-slate-400'}`}>
     <i className={`fa-solid ${icon} text-lg`}></i>
     <span className="text-[10px] font-bold">{label}</span>
   </button>
 );
 
 const LoadingScreen = () => (
-  <div className="flex h-screen items-center justify-center bg-indigo-600">
+  <div className="flex h-screen items-center justify-center bg-[#1a1c23]">
     <div className="text-center text-white">
       <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-white mx-auto mb-4"></div>
-      <p className="font-bold">Carregando Gênio...</p>
+      <p className="font-bold">Acessando Central...</p>
     </div>
   </div>
 );

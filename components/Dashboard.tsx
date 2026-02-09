@@ -1,83 +1,154 @@
 
-import React from 'react';
+import React, { useMemo } from 'react';
+import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { Transaction, TransactionType } from '../types';
 
 interface DashboardProps {
   transactions: Transaction[];
   income: number;
   expense: number;
+  invested: number;
+  balance: number;
 }
 
-const Dashboard: React.FC<DashboardProps> = ({ transactions, income, expense }) => {
-  const recentTransactions = transactions.slice(0, 5);
-  const expensePercentage = income > 0 ? (expense / income) * 100 : 0;
+const Dashboard: React.FC<DashboardProps> = ({ transactions, income, expense, invested, balance }) => {
+  // Dados para o gráfico de Gastos Diários Totais
+  const chartData = useMemo(() => {
+    const dailyData: Record<string, number> = {};
+    
+    // Pegar apenas gastos do mês selecionado
+    transactions
+      .filter(t => t.type === TransactionType.EXPENSE)
+      .forEach(t => {
+        const day = new Date(t.date).getDate();
+        dailyData[day] = (dailyData[day] || 0) + t.amount;
+      });
+
+    // Criar array ordenado pelos dias do mês
+    return Object.entries(dailyData)
+      .map(([day, value]) => ({ day: parseInt(day), value }))
+      .sort((a, b) => a.day - b.day);
+  }, [transactions]);
 
   return (
-    <div className="space-y-6 pt-2">
-      <div className="grid grid-cols-2 gap-4">
-        <div className="bg-white p-4 rounded-2xl shadow-sm border border-slate-50">
+    <div className="space-y-4 pt-6">
+      {/* Grid de KPIs - Estilo Imagem */}
+      <div className="grid grid-cols-2 gap-3">
+        {/* Entradas */}
+        <div className="bg-[#10b981] p-4 rounded-3xl text-white shadow-lg">
           <div className="flex items-center gap-2 mb-2">
-            <div className="w-8 h-8 rounded-full bg-emerald-100 flex items-center justify-center text-emerald-600">
-              <i className="fa-solid fa-arrow-down text-xs"></i>
-            </div>
-            <span className="text-[10px] text-slate-500 font-bold uppercase">Ganhos</span>
-          </div>
-          <p className="text-lg font-bold text-emerald-600">R$ {income.toLocaleString('pt-BR')}</p>
-        </div>
-        <div className="bg-white p-4 rounded-2xl shadow-sm border border-slate-50">
-          <div className="flex items-center gap-2 mb-2">
-            <div className="w-8 h-8 rounded-full bg-rose-100 flex items-center justify-center text-rose-600">
+            <div className="w-7 h-7 bg-white/20 rounded-lg flex items-center justify-center">
               <i className="fa-solid fa-arrow-up text-xs"></i>
             </div>
-            <span className="text-[10px] text-slate-500 font-bold uppercase">Gastos</span>
+            <span className="text-[10px] font-bold uppercase opacity-80">Entradas do Mês</span>
           </div>
-          <p className="text-lg font-bold text-rose-600">R$ {expense.toLocaleString('pt-BR')}</p>
+          <p className="text-xl font-black">R$ {income.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</p>
+        </div>
+
+        {/* Saídas */}
+        <div className="bg-[#ef4444] p-4 rounded-3xl text-white shadow-lg">
+          <div className="flex items-center gap-2 mb-2">
+            <div className="w-7 h-7 bg-white/20 rounded-lg flex items-center justify-center">
+              <i className="fa-solid fa-arrow-down text-xs"></i>
+            </div>
+            <span className="text-[10px] font-bold uppercase opacity-80">Saídas do Mês</span>
+          </div>
+          <p className="text-xl font-black">R$ {expense.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</p>
+        </div>
+
+        {/* Investimentos */}
+        <div className="bg-[#3b82f6] p-4 rounded-3xl text-white shadow-lg">
+          <div className="flex items-center gap-2 mb-2">
+            <div className="w-7 h-7 bg-white/20 rounded-lg flex items-center justify-center">
+              <i className="fa-solid fa-chart-line text-xs"></i>
+            </div>
+            <span className="text-[10px] font-bold uppercase opacity-80">Total Investido no Mês</span>
+          </div>
+          <p className="text-xl font-black">R$ {invested.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</p>
+        </div>
+
+        {/* Saldo */}
+        <div className="bg-[#1e293b] p-4 rounded-3xl text-white shadow-lg">
+          <div className="flex items-center gap-2 mb-2">
+            <div className="w-7 h-7 bg-white/20 rounded-lg flex items-center justify-center">
+              <i className="fa-solid fa-wallet text-xs"></i>
+            </div>
+            <span className="text-[10px] font-bold uppercase opacity-80">Saldo Total do Mês</span>
+          </div>
+          <p className="text-xl font-black">R$ {balance.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</p>
         </div>
       </div>
 
-      {/* Controle de Orçamento Mensal */}
-      <div className="bg-white p-5 rounded-2xl border border-slate-50 shadow-sm">
-        <div className="flex justify-between items-center mb-3">
-          <h3 className="text-sm font-bold text-slate-800">Uso da Receita</h3>
-          <span className="text-[10px] font-bold text-slate-400">{expensePercentage.toFixed(1)}% consumido</span>
+      {/* Gráfico de Gastos Diários - Estilo Imagem */}
+      <div className="bg-[#1e40af] p-5 rounded-[2rem] shadow-xl overflow-hidden">
+        <h3 className="text-white font-bold text-sm mb-6 flex items-center justify-between">
+          Gastos Diários Totais
+          <span className="text-[10px] opacity-60">Mês Atual</span>
+        </h3>
+        <div className="h-48 w-full -ml-6">
+          <ResponsiveContainer width="110%" height="100%">
+            <AreaChart data={chartData}>
+              <defs>
+                <linearGradient id="colorValue" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="5%" stopColor="#ffffff" stopOpacity={0.3}/>
+                  <stop offset="95%" stopColor="#ffffff" stopOpacity={0}/>
+                </linearGradient>
+              </defs>
+              <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#ffffff20" />
+              <XAxis 
+                dataKey="day" 
+                axisLine={false} 
+                tickLine={false} 
+                tick={{ fill: '#ffffff60', fontSize: 10 }} 
+              />
+              <YAxis hide />
+              <Tooltip 
+                contentStyle={{ borderRadius: '12px', border: 'none', backgroundColor: '#fff', fontSize: '10px' }}
+                itemStyle={{ color: '#1e40af', fontWeight: 'bold' }}
+              />
+              <Area 
+                type="monotone" 
+                dataKey="value" 
+                stroke="#ffffff" 
+                strokeWidth={3}
+                fillOpacity={1} 
+                fill="url(#colorValue)" 
+                dot={{ fill: '#ffffff', r: 4, strokeWidth: 2 }}
+                activeDot={{ r: 6, stroke: '#ffffff', strokeWidth: 2 }}
+              />
+            </AreaChart>
+          </ResponsiveContainer>
         </div>
-        <div className="w-full bg-slate-100 h-2 rounded-full overflow-hidden">
-          <div 
-            className={`h-full transition-all duration-1000 ${expensePercentage > 90 ? 'bg-rose-500' : expensePercentage > 70 ? 'bg-amber-500' : 'bg-indigo-500'}`}
-            style={{ width: `${Math.min(expensePercentage, 100)}%` }}
-          ></div>
-        </div>
-        <p className="text-[10px] text-slate-400 mt-2 italic">
-          {expensePercentage > 100 ? 'Você gastou mais do que ganhou este mês!' : 'Seu orçamento está sob controle.'}
-        </p>
       </div>
 
-      <div>
-        <div className="flex justify-between items-center mb-4">
-          <h3 className="font-bold text-slate-800">Últimos Lançamentos</h3>
-          <i className="fa-solid fa-calendar-day text-slate-300"></i>
+      {/* Tabela de Transações Recentes (Simulando o rodapé da imagem) */}
+      <div className="bg-white rounded-3xl p-4 shadow-sm border border-slate-100">
+        <div className="flex justify-between items-center mb-4 px-2">
+          <h3 className="font-bold text-slate-800 text-sm">Últimos Lançamentos</h3>
+          <i className="fa-solid fa-ellipsis text-slate-300"></i>
         </div>
         <div className="space-y-3">
-          {recentTransactions.map(t => (
-            <div key={t.id} className="bg-white p-4 rounded-2xl flex items-center justify-between shadow-sm border border-slate-50 hover:border-indigo-100 transition-colors">
+          {transactions.slice(0, 4).map(t => (
+            <div key={t.id} className="flex items-center justify-between p-2 hover:bg-slate-50 rounded-2xl transition-colors">
               <div className="flex items-center gap-3">
                 <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${t.type === TransactionType.INCOME ? 'bg-emerald-50 text-emerald-500' : 'bg-rose-50 text-rose-500'}`}>
                    <i className={`fa-solid ${getCategoryIcon(t.category)}`}></i>
                 </div>
                 <div>
-                  <p className="text-sm font-semibold text-slate-800">{t.description}</p>
-                  <p className="text-[10px] text-slate-400 font-medium capitalize">{t.category} • {new Date(t.date).toLocaleDateString('pt-BR', { day: 'numeric', month: 'short' })}</p>
+                  <p className="text-xs font-bold text-slate-800">{t.description}</p>
+                  <p className="text-[9px] text-slate-400 uppercase font-bold tracking-tighter">{t.category}</p>
                 </div>
               </div>
-              <p className={`text-sm font-bold ${t.type === TransactionType.INCOME ? 'text-emerald-600' : 'text-slate-800'}`}>
-                {t.type === TransactionType.INCOME ? '+' : '-'} R$ {t.amount.toLocaleString('pt-BR')}
-              </p>
+              <div className="text-right">
+                <p className={`text-xs font-black ${t.type === TransactionType.INCOME ? 'text-emerald-600' : 'text-slate-800'}`}>
+                  R$ {t.amount.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                </p>
+                <p className="text-[9px] text-slate-400">{new Date(t.date).toLocaleDateString('pt-BR')}</p>
+              </div>
             </div>
           ))}
-          {recentTransactions.length === 0 && (
-            <div className="text-center py-10 bg-slate-50 rounded-2xl border border-dashed border-slate-200">
-              <p className="text-slate-400 text-xs">Nenhum lançamento neste mês.</p>
-            </div>
+          {transactions.length === 0 && (
+            <p className="text-center text-slate-400 py-4 text-xs italic">Nenhuma transação encontrada.</p>
           )}
         </div>
       </div>

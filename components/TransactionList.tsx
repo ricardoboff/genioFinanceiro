@@ -48,7 +48,10 @@ const TransactionList: React.FC<Props> = ({ transactions, onDelete, onImportPrev
       <div className="space-y-6">
         {groupedTransactions.map(([date, items]) => (
           <div key={date}>
-            <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3 px-1">{date}</h3>
+            <div className="flex items-center gap-2 mb-3 px-1">
+              <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{date}</h3>
+              <div className="flex-1 h-[1px] bg-slate-100"></div>
+            </div>
             <div className="space-y-2">
               {items.map(t => (
                 <div key={t.id} className="bg-white p-4 rounded-2xl flex items-center justify-between shadow-sm border border-slate-50 transition-all active:scale-[0.98]">
@@ -58,12 +61,20 @@ const TransactionList: React.FC<Props> = ({ transactions, onDelete, onImportPrev
                     </div>
                     <div>
                       <p className="text-sm font-semibold text-slate-800">{t.description}</p>
-                      <p className="text-[10px] text-slate-400 font-medium">{t.category}</p>
+                      <div className="flex items-center gap-1.5 mt-0.5">
+                        <span className="text-[10px] text-slate-400 font-medium">{t.category}</span>
+                        {t.automated && (
+                          <div className="flex items-center gap-1 px-1.5 py-0.5 bg-slate-50 rounded-md border border-slate-100">
+                             <i className="fa-solid fa-building-columns text-[8px] text-indigo-400"></i>
+                             <span className="text-[8px] text-slate-400 font-bold uppercase">{t.institution}</span>
+                          </div>
+                        )}
+                      </div>
                     </div>
                   </div>
                   <div className="flex items-center gap-3">
                     <p className={`text-sm font-bold ${t.type === TransactionType.INCOME ? 'text-emerald-600' : 'text-slate-800'}`}>
-                      R$ {t.amount.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                      {t.type === TransactionType.INCOME ? '+' : '-'} R$ {t.amount.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                     </p>
                     <button onClick={() => onDelete(t.id)} className="w-8 h-8 flex items-center justify-center text-slate-200 hover:text-rose-400 transition-colors">
                       <i className="fa-solid fa-trash-can text-xs"></i>
@@ -81,7 +92,7 @@ const TransactionList: React.FC<Props> = ({ transactions, onDelete, onImportPrev
               <i className="fa-solid fa-calendar-xmark text-slate-200 text-2xl"></i>
             </div>
             <p className="text-slate-500 text-sm font-bold mb-2">Nada por aqui ainda!</p>
-            <p className="text-slate-400 text-xs mb-8">Deseja copiar as despesas fixas do mês anterior para começar?</p>
+            <p className="text-slate-400 text-xs mb-8">Sincronize sua conta bancária para trazer seus gastos automaticamente.</p>
             
             <button 
               onClick={onImportPrevious}

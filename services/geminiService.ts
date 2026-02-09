@@ -1,17 +1,15 @@
-import { GoogleGenAI, GenerateContentResponse, Type } from "@google/genai";
+
+import { GoogleGenAI, Type } from "@google/genai";
 import { Transaction } from "../types";
 
 /**
  * Usa a IA para processar um extrato bruto do banco e extrair transações estruturadas.
  */
 export const processBankStatement = async (rawText: string): Promise<Partial<Transaction>[]> => {
-  if (!process.env.API_KEY) return [];
-
   try {
-    // Inicializa o cliente Gemini API right before the call to ensure fresh configuration
+    // Requisito: Utilizar process.env.API_KEY diretamente na inicialização do GoogleGenAI
     const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
     
-    // Usamos gemini-3-pro-preview para tarefas complexas de extração de dados e raciocínio estruturado.
     const response = await ai.models.generateContent({
       model: 'gemini-3-pro-preview',
       contents: `Analise este extrato bruto e extraia os lançamentos: \n\n${rawText}`,
@@ -22,21 +20,21 @@ export const processBankStatement = async (rawText: string): Promise<Partial<Tra
           items: {
             type: Type.OBJECT,
             properties: {
-              description: { type: Type.STRING, description: "Nome amigável da transação (ex: Uber, Netflix)" },
-              amount: { type: Type.NUMBER, description: "Valor absoluto da transação" },
-              type: { type: Type.STRING, description: "INCOME para entradas, EXPENSE para saídas" },
-              category: { type: Type.STRING, description: "Categoria: Alimentação, Transporte, Lazer, Saúde, Moradia, Salário, Investimentos ou Outros" },
-              date: { type: Type.STRING, description: "Data aproximada no formato YYYY-MM-DD" }
+              description: { type: Type.STRING, description: "Nome amigável da transação" },
+              amount: { type: Type.NUMBER, description: "Valor absoluto" },
+              type: { type: Type.STRING, description: "INCOME ou EXPENSE" },
+              category: { type: Type.STRING, description: "Categoria" },
+              date: { type: Type.STRING, description: "Data YYYY-MM-DD" }
             },
             required: ["description", "amount", "type", "category", "date"],
             propertyOrdering: ["description", "amount", "type", "category", "date"]
           }
         },
-        systemInstruction: "Você é um especialista em processamento de dados bancários. Extraia informações de textos brutos de extratos (Open Finance). Limpe nomes sujos. Se o valor for negativo no extrato, classifique como EXPENSE e retorne o valor positivo. Se for positivo, INCOME.",
+        systemInstruction: "Você é um especialista em processamento de dados bancários via Open Finance. Limpe nomes sujos e normalize categorias.",
       }
     });
 
-    // Access the .text property directly (getter)
+    // Acessar .text como propriedade, não como método.
     const jsonStr = response.text?.trim();
     if (jsonStr) {
       return JSON.parse(jsonStr);
@@ -52,7 +50,6 @@ export const processBankStatement = async (rawText: string): Promise<Partial<Tra
  * Fornece conselhos financeiros baseados nas transações do usuário.
  */
 export const getFinancialAdvice = async (transactions: Transaction[]) => {
-  if (!process.env.API_KEY) return "O assistente de IA está temporariamente indisponível.";
   if (transactions.length === 0) return "Adicione algumas transações para análise.";
 
   const transactionSummary = transactions.slice(-20).map(t => 
@@ -60,17 +57,16 @@ export const getFinancialAdvice = async (transactions: Transaction[]) => {
   ).join('\n');
 
   try {
-    // Inicializa o cliente Gemini API right before the call
+    // Requisito: Utilizar process.env.API_KEY diretamente na inicialização do GoogleGenAI
     const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
-    // Usamos gemini-3-flash-preview para tarefas de sumarização e conselhos rápidos
-    const response: GenerateContentResponse = await ai.models.generateContent({
+    const response = await ai.models.generateContent({
       model: 'gemini-3-flash-preview',
       contents: `Aqui estão minhas transações recentes:\n\n${transactionSummary}`,
       config: {
         systemInstruction: "Você é um consultor financeiro. Dê 3 dicas curtas e práticas baseadas nos gastos do usuário. Use Markdown.",
       }
     });
-    // Access the .text property directly
+    // Acessar .text como propriedade
     return response.text || "Não foi possível gerar dicas no momento.";
   } catch (error) {
     console.error("Erro na IA:", error);

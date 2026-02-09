@@ -1,7 +1,15 @@
+
 import { initializeApp } from "firebase/app";
 import { getFirestore } from "firebase/firestore";
-// Use modular imports for Firebase Auth. 
-import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, onAuthStateChanged } from "firebase/auth";
+// Fix: Ensure all modular functions are imported correctly from the standard 'firebase/auth' path.
+// If this fails, ensure the 'firebase' package version is 9.x or newer in your environment.
+import { 
+  getAuth, 
+  signInWithEmailAndPassword, 
+  createUserWithEmailAndPassword, 
+  signOut, 
+  onAuthStateChanged 
+} from "firebase/auth";
 
 const firebaseConfig = {
   apiKey: "AIzaSyDSHVmQzOzykcHZdAyrIAA4WT9EcKccKP8",
@@ -18,7 +26,7 @@ const app = initializeApp(firebaseConfig);
 export const db = getFirestore(app);
 export const auth = getAuth(app);
 
-// Re-exporting functions for use in components to maintain modular architecture.
+// Re-exporting functions for use in components to maintain modular architecture and fix member export errors.
 export { 
   signInWithEmailAndPassword, 
   createUserWithEmailAndPassword, 

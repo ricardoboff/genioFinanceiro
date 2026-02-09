@@ -12,19 +12,6 @@ export interface Transaction {
   category: string;
   type: TransactionType;
   uid?: string;
-  automated?: boolean; // Indica se veio do Open Finance
-  institution?: string; // Nome do banco de origem
-  bankDetails?: string; // Agência e Conta (ex: 0001 / 12345-6)
-}
-
-export interface BankAccount {
-  id: string;
-  institution: string;
-  agency: string;
-  accountNumber: string;
-  lastSync: string;
-  status: 'active' | 'error' | 'syncing';
-  balance: number;
 }
 
 export interface UserProfile {
@@ -36,7 +23,7 @@ export interface UserProfile {
   isAdmin: boolean;
 }
 
-export type View = 'dashboard' | 'transactions' | 'analytics' | 'ai' | 'admin' | 'profile' | 'banks';
+export type View = 'dashboard' | 'transactions' | 'analytics' | 'ai' | 'admin' | 'profile';
 
 export const CATEGORIES = [
   'Alimentação',

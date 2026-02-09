@@ -1,8 +1,7 @@
 
 import { initializeApp } from "firebase/app";
 import { getFirestore } from "firebase/firestore";
-// Fix: Ensure all modular functions are imported correctly from the standard 'firebase/auth' path.
-// If this fails, ensure the 'firebase' package version is 9.x or newer in your environment.
+// Fix: Modular imports for Firebase Auth v9+
 import { 
   getAuth, 
   signInWithEmailAndPassword, 
@@ -26,7 +25,7 @@ const app = initializeApp(firebaseConfig);
 export const db = getFirestore(app);
 export const auth = getAuth(app);
 
-// Re-exporting functions for use in components to maintain modular architecture and fix member export errors.
+// Re-exporting functions for use in components to maintain modular architecture.
 export { 
   signInWithEmailAndPassword, 
   createUserWithEmailAndPassword, 

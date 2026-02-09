@@ -61,15 +61,7 @@ const TransactionList: React.FC<Props> = ({ transactions, onDelete, onImportPrev
                     </div>
                     <div>
                       <p className="text-sm font-semibold text-slate-800">{t.description}</p>
-                      <div className="flex items-center gap-1.5 mt-0.5">
-                        <span className="text-[10px] text-slate-400 font-medium">{t.category}</span>
-                        {t.automated && (
-                          <div className="flex items-center gap-1 px-1.5 py-0.5 bg-slate-50 rounded-md border border-slate-100">
-                             <i className="fa-solid fa-building-columns text-[8px] text-indigo-400"></i>
-                             <span className="text-[8px] text-slate-400 font-bold uppercase">{t.institution}</span>
-                          </div>
-                        )}
-                      </div>
+                      <span className="text-[10px] text-slate-400 font-medium">{t.category}</span>
                     </div>
                   </div>
                   <div className="flex items-center gap-3">
@@ -92,7 +84,7 @@ const TransactionList: React.FC<Props> = ({ transactions, onDelete, onImportPrev
               <i className="fa-solid fa-calendar-xmark text-slate-200 text-2xl"></i>
             </div>
             <p className="text-slate-500 text-sm font-bold mb-2">Nada por aqui ainda!</p>
-            <p className="text-slate-400 text-xs mb-8">Sincronize sua conta bancária para trazer seus gastos automaticamente.</p>
+            <p className="text-slate-400 text-xs mb-8">Registre seus ganhos e gastos manualmente clicando no botão +</p>
             
             <button 
               onClick={onImportPrevious}

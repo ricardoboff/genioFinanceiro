@@ -1,8 +1,7 @@
 
 import React, { useState, useEffect, useMemo } from 'react';
-import { Transaction, TransactionType, View, UserProfile, BankAccount, CATEGORIES } from './types';
+import { Transaction, TransactionType, View, UserProfile, CATEGORIES } from './types';
 import { storageService } from './services/storageService';
-import { processBankStatement } from './services/geminiService';
 import { 
   auth,
   signInWithEmailAndPassword, 
@@ -17,7 +16,6 @@ import Analytics from './components/Analytics';
 import AIAssistant from './components/AIAssistant';
 import TransactionForm from './components/TransactionForm';
 import MonthSelector from './components/MonthSelector';
-import BankConnection from './components/BankConnection';
 import Login from './components/Auth/Login';
 import Register from './components/Auth/Register';
 import AdminPanel from './components/Admin/AdminPanel';
@@ -28,7 +26,6 @@ const App: React.FC = () => {
   const [view, setView] = useState<View>('dashboard');
   const [isRegistering, setIsRegistering] = useState(false);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
-  const [bankAccounts, setBankAccounts] = useState<BankAccount[]>([]);
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [isLoading, setIsLoading] = useState(true);
@@ -47,7 +44,6 @@ const App: React.FC = () => {
         setCurrentUser(null);
         setUserProfile(null);
         setTransactions([]);
-        setBankAccounts([]);
       }
       setIsLoading(false);
     });
@@ -101,55 +97,6 @@ const App: React.FC = () => {
     }
   };
 
-  const handleConnectBank = async (bankInfo: { name: string, agency: string, account: string, rawData: string }) => {
-    if (!currentUser) return;
-
-    // 1. Usa a IA (Gemini) para processar o extrato bruto
-    const extractedTransactions = await processBankStatement(bankInfo.rawData);
-    
-    let totalBalance = 0;
-    const bankDetailsStr = `Ag: ${bankInfo.agency} / Cc: ${bankInfo.account}`;
-
-    // 2. Salva cada transação extraída no Firebase
-    for (const t of extractedTransactions) {
-      const amount = t.amount || 0;
-      if (t.type === TransactionType.INCOME) totalBalance += amount;
-      else totalBalance -= amount;
-
-      await handleAddTransaction({
-        id: '',
-        description: t.description || 'Lançamento Bancário',
-        amount: amount,
-        date: t.date || new Date().toISOString(),
-        category: t.category || 'Outros',
-        type: t.type as TransactionType || TransactionType.EXPENSE,
-        automated: true,
-        institution: bankInfo.name,
-        bankDetails: bankDetailsStr
-      });
-    }
-
-    // 3. Registra a conta no app
-    const newAcc: BankAccount = {
-      id: Math.random().toString(36).substr(2, 9),
-      institution: bankInfo.name,
-      agency: bankInfo.agency,
-      accountNumber: bankInfo.account,
-      lastSync: new Date().toISOString(),
-      status: 'active',
-      balance: totalBalance
-    };
-    setBankAccounts([...bankAccounts, newAcc]);
-    setView('transactions'); 
-  };
-
-  const handleSyncBank = (id: string) => {
-    setBankAccounts(prev => prev.map(acc => 
-      acc.id === id ? { ...acc, lastSync: new Date().toISOString() } : acc
-    ));
-    alert("Sincronização concluída!");
-  };
-
   const sortedTransactions = useMemo(() => {
     const filtered = transactions.filter(t => {
       const d = new Date(t.date);
@@ -194,21 +141,18 @@ const App: React.FC = () => {
       <main className="flex-1 overflow-y-auto px-4 -mt-6 bg-[#f8fafc] rounded-t-3xl pb-24">
         {view === 'dashboard' && <Dashboard transactions={sortedTransactions} income={monthlyIncome} expense={monthlyExpense} />}
         {view === 'transactions' && <TransactionList transactions={sortedTransactions} onDelete={(id) => storageService.deleteTransaction(id)} onImportPrevious={() => {}} />}
-        {view === 'analytics' && <Analytics transactions={sortedTransactions} />}
         {view === 'ai' && <AIAssistant transactions={sortedTransactions} />}
-        {view === 'banks' && <BankConnection accounts={bankAccounts} onConnect={handleConnectBank} onSync={handleSyncBank} />}
         {view === 'admin' && userProfile?.isAdmin && <AdminPanel />}
         {view === 'profile' && (
           <div className="pt-6 space-y-4">
              <div className="bg-white p-6 rounded-3xl shadow-sm border border-slate-100">
                <h3 className="font-bold text-slate-800 mb-4">Configurações</h3>
-               <button onClick={() => setView('banks')} className="w-full flex items-center justify-between py-3 text-slate-600 font-bold text-sm">
-                  <span><i className="fa-solid fa-building-columns mr-3 text-indigo-500"></i> Open Finance</span>
-                  <i className="fa-solid fa-chevron-right text-[10px] text-slate-300"></i>
-               </button>
                <button onClick={() => signOut(auth)} className="w-full text-left py-3 text-rose-500 font-bold text-sm">
-                  <i className="fa-solid fa-right-from-bracket mr-3"></i> Sair
+                  <i className="fa-solid fa-right-from-bracket mr-3"></i> Sair da Conta
                </button>
+             </div>
+             <div className="text-center px-6">
+                <p className="text-[10px] text-slate-400">Gênio Financeiro v1.2 • Todos os dados são armazenados de forma segura e privada.</p>
              </div>
           </div>
         )}
@@ -221,7 +165,6 @@ const App: React.FC = () => {
       <nav className="bg-white border-t flex justify-around py-3 safe-area-bottom z-50">
         <NavItem icon="fa-house" label="Resumo" active={view === 'dashboard'} onClick={() => setView('dashboard')} />
         <NavItem icon="fa-list-ul" label="Diário" active={view === 'transactions'} onClick={() => setView('transactions')} />
-        <NavItem icon="fa-building-columns" label="Bancos" active={view === 'banks'} onClick={() => setView('banks')} />
         <NavItem icon="fa-robot" label="Gênio" active={view === 'ai'} onClick={() => setView('ai')} />
       </nav>
 

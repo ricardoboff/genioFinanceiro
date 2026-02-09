@@ -2,7 +2,14 @@
 import { initializeApp } from "firebase/app";
 import { getFirestore } from "firebase/firestore";
 // Correct modular imports for Firebase Auth v9+
-import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, onAuthStateChanged } from "firebase/auth";
+// Using multiline import to ensure clarity and potentially resolve resolution issues in some environments
+import { 
+  getAuth, 
+  signInWithEmailAndPassword, 
+  createUserWithEmailAndPassword, 
+  signOut, 
+  onAuthStateChanged 
+} from "firebase/auth";
 
 const firebaseConfig = {
   apiKey: "AIzaSyDSHVmQzOzykcHZdAyrIAA4WT9EcKccKP8",

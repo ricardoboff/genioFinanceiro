@@ -159,7 +159,7 @@ const App: React.FC = () => {
 
       <main className="flex-1 overflow-y-auto px-4 bg-[#f8fafc] rounded-t-[2.5rem] pb-24">
         {view === 'dashboard' && <Dashboard transactions={sortedTransactions} income={income} expense={expense} invested={totalInvested} balance={balance} />}
-        {view === 'transactions' && <TransactionList transactions={sortedTransactions} onDelete={(id) => storageService.deleteTransaction(id)} onImportPrevious={() => {}} />}
+        {view === 'transactions' && <TransactionList transactions={sortedTransactions} onEdit={openEdit} onDelete={(id) => storageService.deleteTransaction(id)} onImportPrevious={() => {}} />}
         {view === 'table' && <TransactionTable transactions={sortedTransactions} onEdit={openEdit} onDelete={(id) => storageService.deleteTransaction(id)} />}
         {view === 'ai' && <AIAssistant transactions={sortedTransactions} />}
         {view === 'admin' && userProfile?.isAdmin && <AdminPanel />}

@@ -5,11 +5,12 @@ import { getCategoryIcon } from './Dashboard';
 
 interface Props {
   transactions: Transaction[];
+  onEdit: (t: Transaction) => void;
   onDelete: (id: string) => void;
   onImportPrevious: () => void;
 }
 
-const TransactionList: React.FC<Props> = ({ transactions, onDelete, onImportPrevious }) => {
+const TransactionList: React.FC<Props> = ({ transactions, onEdit, onDelete, onImportPrevious }) => {
   // Agrupar por dia
   const groupedTransactions = useMemo(() => {
     const groups: Record<string, Transaction[]> = {};
@@ -64,13 +65,20 @@ const TransactionList: React.FC<Props> = ({ transactions, onDelete, onImportPrev
                       <span className="text-[10px] text-slate-400 font-medium">{t.category}</span>
                     </div>
                   </div>
-                  <div className="flex items-center gap-3">
-                    <p className={`text-sm font-bold ${t.type === TransactionType.INCOME ? 'text-emerald-600' : 'text-slate-800'}`}>
-                      {t.type === TransactionType.INCOME ? '+' : '-'} R$ {t.amount.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                    </p>
-                    <button onClick={() => onDelete(t.id)} className="w-8 h-8 flex items-center justify-center text-slate-200 hover:text-rose-400 transition-colors">
-                      <i className="fa-solid fa-trash-can text-xs"></i>
-                    </button>
+                  <div className="flex items-center gap-2">
+                    <div className="text-right mr-2">
+                      <p className={`text-sm font-bold ${t.type === TransactionType.INCOME ? 'text-emerald-600' : 'text-slate-800'}`}>
+                        {t.type === TransactionType.INCOME ? '+' : '-'} R$ {t.amount.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                      </p>
+                    </div>
+                    <div className="flex gap-1">
+                      <button onClick={() => onEdit(t)} className="w-8 h-8 flex items-center justify-center text-slate-200 hover:text-indigo-400 transition-colors">
+                        <i className="fa-solid fa-pen-to-square text-xs"></i>
+                      </button>
+                      <button onClick={() => onDelete(t.id)} className="w-8 h-8 flex items-center justify-center text-slate-200 hover:text-rose-400 transition-colors">
+                        <i className="fa-solid fa-trash-can text-xs"></i>
+                      </button>
+                    </div>
                   </div>
                 </div>
               ))}

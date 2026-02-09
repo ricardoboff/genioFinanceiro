@@ -35,9 +35,6 @@ export const storageService = {
         callback(transactions);
       }, (error) => {
         console.error("Erro no onSnapshot do Firestore:", error);
-        if (error.code === 'permission-denied') {
-          alert("Acesso negado às transações. Verifique as Regras de Segurança do Firebase.");
-        }
       });
     } catch (err) {
       console.error("Erro ao inscrever transações:", err);
@@ -49,7 +46,17 @@ export const storageService = {
     try {
       return await addDoc(collection(db, TRANSACTIONS_COL), transaction);
     } catch (err) {
-      console.error("Erro ao adicionar transação no Firestore:", err);
+      console.error("Erro ao adicionar transação:", err);
+      throw err;
+    }
+  },
+
+  updateTransaction: async (id: string, data: Partial<Transaction>) => {
+    try {
+      const transactionRef = doc(db, TRANSACTIONS_COL, id);
+      await updateDoc(transactionRef, data);
+    } catch (err) {
+      console.error("Erro ao atualizar transação:", err);
       throw err;
     }
   },
@@ -88,15 +95,6 @@ export const storageService = {
       await updateDoc(doc(db, PROFILES_COL, uid), data);
     } catch (err) {
       console.error("Erro ao atualizar perfil:", err);
-      throw err;
-    }
-  },
-
-  deleteProfile: async (uid: string) => {
-    try {
-      await deleteDoc(doc(db, PROFILES_COL, uid));
-    } catch (err) {
-      console.error("Erro ao deletar perfil:", err);
       throw err;
     }
   },

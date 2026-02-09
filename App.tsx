@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect, useMemo } from 'react';
-import { Transaction, TransactionType, View, UserProfile, CATEGORIES } from './types';
+import { Transaction, TransactionType, View, UserProfile } from './types';
 import { storageService } from './services/storageService';
 import { 
   auth,
@@ -12,7 +12,7 @@ import {
 
 import Dashboard from './components/Dashboard';
 import TransactionList from './components/TransactionList';
-import Analytics from './components/Analytics';
+import TransactionTable from './components/TransactionTable';
 import AIAssistant from './components/AIAssistant';
 import TransactionForm from './components/TransactionForm';
 import MonthSelector from './components/MonthSelector';
@@ -27,6 +27,7 @@ const App: React.FC = () => {
   const [isRegistering, setIsRegistering] = useState(false);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [isFormOpen, setIsFormOpen] = useState(false);
+  const [editingTransaction, setEditingTransaction] = useState<Transaction | null>(null);
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [isLoading, setIsLoading] = useState(true);
 
@@ -97,6 +98,21 @@ const App: React.FC = () => {
     }
   };
 
+  const handleUpdateTransaction = async (id: string, data: Partial<Transaction>) => {
+    try {
+      await storageService.updateTransaction(id, data);
+      setEditingTransaction(null);
+      setIsFormOpen(false);
+    } catch (e: any) {
+      console.error(e);
+    }
+  };
+
+  const openEdit = (t: Transaction) => {
+    setEditingTransaction(t);
+    setIsFormOpen(true);
+  };
+
   const sortedTransactions = useMemo(() => {
     const filtered = transactions.filter(t => {
       const d = new Date(t.date);
@@ -113,10 +129,8 @@ const App: React.FC = () => {
       : <Login onLogin={handleLogin} onGoToRegister={() => setIsRegistering(true)} />;
   }
 
-  // Cálculos baseados na imagem
   const income = sortedTransactions.filter(t => t.type === TransactionType.INCOME).reduce((acc, t) => acc + t.amount, 0);
   const totalInvested = sortedTransactions.filter(t => t.category === 'Investimentos').reduce((acc, t) => acc + t.amount, 0);
-  // Saídas excluindo investimentos (para bater com a lógica da imagem onde são cards separados)
   const expense = sortedTransactions.filter(t => t.type === TransactionType.EXPENSE && t.category !== 'Investimentos').reduce((acc, t) => acc + t.amount, 0);
   const balance = income - expense - totalInvested;
 
@@ -132,7 +146,7 @@ const App: React.FC = () => {
       <header className="p-6 pb-2">
         <div className="flex justify-between items-start mb-4">
           <div>
-            <h1 className="text-2xl font-black text-white">Seja Bem Vindo à Central de Controle</h1>
+            <h1 className="text-2xl font-black text-white">Central de Controle</h1>
             <p className="text-slate-400 text-[11px] mt-1 capitalize">{todayFormatted}</p>
           </div>
           <button onClick={() => setView('profile')} className="w-10 h-10 bg-white/10 rounded-xl flex items-center justify-center text-white">
@@ -146,6 +160,7 @@ const App: React.FC = () => {
       <main className="flex-1 overflow-y-auto px-4 bg-[#f8fafc] rounded-t-[2.5rem] pb-24">
         {view === 'dashboard' && <Dashboard transactions={sortedTransactions} income={income} expense={expense} invested={totalInvested} balance={balance} />}
         {view === 'transactions' && <TransactionList transactions={sortedTransactions} onDelete={(id) => storageService.deleteTransaction(id)} onImportPrevious={() => {}} />}
+        {view === 'table' && <TransactionTable transactions={sortedTransactions} onEdit={openEdit} onDelete={(id) => storageService.deleteTransaction(id)} />}
         {view === 'ai' && <AIAssistant transactions={sortedTransactions} />}
         {view === 'admin' && userProfile?.isAdmin && <AdminPanel />}
         {view === 'profile' && (
@@ -157,23 +172,34 @@ const App: React.FC = () => {
                </button>
              </div>
              <div className="text-center px-6">
-                <p className="text-[10px] text-slate-400">Gênio Financeiro v2.0 • Inspirado na Central de Controle</p>
+                <p className="text-[10px] text-slate-400">Gênio Financeiro v2.1 • Smart Control</p>
              </div>
           </div>
         )}
       </main>
 
-      <button onClick={() => setIsFormOpen(true)} className="absolute bottom-24 right-6 w-14 h-14 bg-[#1a1c23] text-white rounded-full shadow-lg z-40 border-2 border-white/10">
+      <button 
+        onClick={() => { setEditingTransaction(null); setIsFormOpen(true); }} 
+        className="absolute bottom-24 right-6 w-14 h-14 bg-[#1a1c23] text-white rounded-full shadow-lg z-40 border-2 border-white/10"
+      >
         <i className="fa-solid fa-plus text-xl"></i>
       </button>
 
       <nav className="bg-white border-t flex justify-around py-3 safe-area-bottom z-50">
-        <NavItem icon="fa-chart-line" label="Dashboard" active={view === 'dashboard'} onClick={() => setView('dashboard')} />
-        <NavItem icon="fa-list-check" label="Lançamentos" active={view === 'transactions'} onClick={() => setView('transactions')} />
+        <NavItem icon="fa-chart-pie" label="Resumo" active={view === 'dashboard'} onClick={() => setView('dashboard')} />
+        <NavItem icon="fa-table-list" label="Planilha" active={view === 'table'} onClick={() => setView('table')} />
         <NavItem icon="fa-wand-magic-sparkles" label="Gênio" active={view === 'ai'} onClick={() => setView('ai')} />
       </nav>
 
-      {isFormOpen && <TransactionForm selectedDate={selectedDate} onAdd={handleAddTransaction} onClose={() => setIsFormOpen(false)} />}
+      {isFormOpen && (
+        <TransactionForm 
+          transactionToEdit={editingTransaction}
+          selectedDate={selectedDate} 
+          onAdd={handleAddTransaction} 
+          onUpdate={handleUpdateTransaction}
+          onClose={() => { setIsFormOpen(false); setEditingTransaction(null); }} 
+        />
+      )}
     </div>
   );
 };

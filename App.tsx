@@ -172,7 +172,7 @@ const App: React.FC = () => {
                </button>
              </div>
              <div className="text-center px-6">
-                <p className="text-[10px] text-slate-400">Gênio Financeiro v2.1 • Smart Control</p>
+                <p className="text-[10px] text-slate-400">Gênio Financeiro v2.2 • Smart Control</p>
              </div>
           </div>
         )}
@@ -187,7 +187,8 @@ const App: React.FC = () => {
 
       <nav className="bg-white border-t flex justify-around py-3 safe-area-bottom z-50">
         <NavItem icon="fa-chart-pie" label="Resumo" active={view === 'dashboard'} onClick={() => setView('dashboard')} />
-        <NavItem icon="fa-table-list" label="Planilha" active={view === 'table'} onClick={() => setView('table')} />
+        <NavItem icon="fa-list-check" label="Diário" active={view === 'transactions'} onClick={() => setView('transactions')} />
+        <NavItem icon="fa-table" label="Planilha" active={view === 'table'} onClick={() => setView('table')} />
         <NavItem icon="fa-wand-magic-sparkles" label="Gênio" active={view === 'ai'} onClick={() => setView('ai')} />
       </nav>
 

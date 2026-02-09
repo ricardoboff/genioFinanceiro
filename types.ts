@@ -4,9 +4,6 @@ export enum TransactionType {
   EXPENSE = 'EXPENSE'
 }
 
-export type SpendingType = 'Renda' | 'Necessidades' | 'Desejos';
-export type PaymentMethod = 'Dinheiro' | 'Pix' | 'Crédito' | 'Débito';
-
 export interface Transaction {
   id: string;
   description: string;
@@ -14,8 +11,6 @@ export interface Transaction {
   date: string;
   category: string;
   type: TransactionType;
-  spendingType: SpendingType;
-  paymentMethod: PaymentMethod;
   uid?: string;
 }
 
@@ -39,6 +34,5 @@ export const CATEGORIES = [
   'Moradia',
   'Salário',
   'Investimentos',
-  'Assinaturas',
   'Outros'
 ];

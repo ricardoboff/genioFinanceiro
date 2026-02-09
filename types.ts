@@ -14,11 +14,14 @@ export interface Transaction {
   uid?: string;
   automated?: boolean; // Indica se veio do Open Finance
   institution?: string; // Nome do banco de origem
+  bankDetails?: string; // Agência e Conta (ex: 0001 / 12345-6)
 }
 
 export interface BankAccount {
   id: string;
   institution: string;
+  agency: string;
+  accountNumber: string;
   lastSync: string;
   status: 'active' | 'error' | 'syncing';
   balance: number;

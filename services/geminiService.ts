@@ -1,5 +1,4 @@
-import { GoogleGenAI } from "@google/genai";
-import { GenerateContentResponse, Type } from "@google/genai";
+import { GoogleGenAI, GenerateContentResponse, Type } from "@google/genai";
 import { Transaction } from "../types";
 
 /**
@@ -9,10 +8,10 @@ export const processBankStatement = async (rawText: string): Promise<Partial<Tra
   if (!process.env.API_KEY) return [];
 
   try {
-    // Inicializa o cliente Gemini API right before the call
+    // Inicializa o cliente Gemini API right before the call to ensure fresh configuration
     const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
     
-    // Usamos gemini-3-pro-preview para tarefas complexas de extração de dados.
+    // Usamos gemini-3-pro-preview para tarefas complexas de extração de dados e raciocínio estruturado.
     const response = await ai.models.generateContent({
       model: 'gemini-3-pro-preview',
       contents: `Analise este extrato bruto e extraia os lançamentos: \n\n${rawText}`,
@@ -63,9 +62,9 @@ export const getFinancialAdvice = async (transactions: Transaction[]) => {
   try {
     // Inicializa o cliente Gemini API right before the call
     const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
-    // Usamos gemini-3-pro-preview para análise financeira detalhada
+    // Usamos gemini-3-flash-preview para tarefas de sumarização e conselhos rápidos
     const response: GenerateContentResponse = await ai.models.generateContent({
-      model: 'gemini-3-pro-preview',
+      model: 'gemini-3-flash-preview',
       contents: `Aqui estão minhas transações recentes:\n\n${transactionSummary}`,
       config: {
         systemInstruction: "Você é um consultor financeiro. Dê 3 dicas curtas e práticas baseadas nos gastos do usuário. Use Markdown.",

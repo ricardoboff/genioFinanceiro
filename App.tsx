@@ -101,13 +101,14 @@ const App: React.FC = () => {
     }
   };
 
-  const handleConnectBank = async (institution: string, rawData: string) => {
+  const handleConnectBank = async (bankInfo: { name: string, agency: string, account: string, rawData: string }) => {
     if (!currentUser) return;
 
-    // 1. Usa a IA (Gemini) para processar o extrato bruto recebido do "banco"
-    const extractedTransactions = await processBankStatement(rawData);
+    // 1. Usa a IA (Gemini) para processar o extrato bruto
+    const extractedTransactions = await processBankStatement(bankInfo.rawData);
     
     let totalBalance = 0;
+    const bankDetailsStr = `Ag: ${bankInfo.agency} / Cc: ${bankInfo.account}`;
 
     // 2. Salva cada transação extraída no Firebase
     for (const t of extractedTransactions) {
@@ -123,20 +124,23 @@ const App: React.FC = () => {
         category: t.category || 'Outros',
         type: t.type as TransactionType || TransactionType.EXPENSE,
         automated: true,
-        institution
+        institution: bankInfo.name,
+        bankDetails: bankDetailsStr
       });
     }
 
     // 3. Registra a conta no app
     const newAcc: BankAccount = {
       id: Math.random().toString(36).substr(2, 9),
-      institution,
+      institution: bankInfo.name,
+      agency: bankInfo.agency,
+      accountNumber: bankInfo.account,
       lastSync: new Date().toISOString(),
       status: 'active',
       balance: totalBalance
     };
     setBankAccounts([...bankAccounts, newAcc]);
-    setView('transactions'); // Redireciona para ver os novos lançamentos
+    setView('transactions'); 
   };
 
   const handleSyncBank = (id: string) => {

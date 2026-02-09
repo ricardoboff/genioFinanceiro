@@ -1,5 +1,6 @@
 
-import React from 'react';
+import React, { useMemo } from 'react';
+import { PieChart, Pie, Cell, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, Legend } from 'recharts';
 import { Transaction, TransactionType } from '../types';
 import { getCategoryIcon } from './Dashboard';
 
@@ -9,8 +10,42 @@ interface Props {
   onDelete: (id: string) => void;
 }
 
+const COLORS_SPENDING = {
+  'Necessidades': '#ef4444', // Red
+  'Desejos': '#9333ea',      // Purple
+  'Renda': '#10b981',        // Emerald
+};
+
+const COLORS_PAYMENT = ['#6366f1', '#10b981', '#f59e0b', '#ef4444'];
+
 const TransactionTable: React.FC<Props> = ({ transactions, onEdit, onDelete }) => {
   
+  // Dados para Gráfico 50/30/20 (Spending Type)
+  const spendingTypeData = useMemo(() => {
+    const totals: Record<string, number> = {};
+    transactions
+      .filter(t => t.type === TransactionType.EXPENSE)
+      .forEach(t => {
+        const type = t.spendingType || 'Necessidades';
+        totals[type] = (totals[type] || 0) + t.amount;
+      });
+    return Object.entries(totals).map(([name, value]) => ({ name, value }));
+  }, [transactions]);
+
+  // Dados para Gráfico de Meios de Pagamento
+  const paymentMethodData = useMemo(() => {
+    const totals: Record<string, number> = {};
+    transactions
+      .filter(t => t.type === TransactionType.EXPENSE)
+      .forEach(t => {
+        const method = t.paymentMethod || 'Outro';
+        totals[method] = (totals[method] || 0) + t.amount;
+      });
+    return Object.entries(totals)
+      .map(([name, value]) => ({ name, value }))
+      .sort((a, b) => b.value - a.value);
+  }, [transactions]);
+
   const handleExport = () => {
     if (transactions.length === 0) return;
     
@@ -41,9 +76,9 @@ const TransactionTable: React.FC<Props> = ({ transactions, onEdit, onDelete }) =
 
   const getBadgeStyle = (type: string) => {
     switch (type) {
-      case 'Renda': return 'bg-[#10b981] text-white'; // Verde Esmeralda
-      case 'Necessidades': return 'bg-[#ef4444] text-white'; // Vermelho
-      case 'Desejos': return 'bg-[#9333ea] text-white'; // Roxo
+      case 'Renda': return 'bg-[#10b981] text-white'; 
+      case 'Necessidades': return 'bg-[#ef4444] text-white'; 
+      case 'Desejos': return 'bg-[#9333ea] text-white'; 
       default: return 'bg-slate-400 text-white';
     }
   };
@@ -55,18 +90,89 @@ const TransactionTable: React.FC<Props> = ({ transactions, onEdit, onDelete }) =
   };
 
   return (
-    <div className="space-y-4 pt-4 pb-20">
+    <div className="space-y-6 pt-4 pb-20">
       <div className="flex justify-between items-center px-1">
-        <h2 className="text-lg font-black text-slate-800 uppercase tracking-tighter">Relatório Planilha</h2>
+        <h2 className="text-lg font-black text-slate-800 uppercase tracking-tighter">Relatório & Análise</h2>
         <button 
           onClick={handleExport}
           className="bg-[#1a1c23] text-white text-[10px] font-bold px-4 py-2 rounded-xl flex items-center gap-2 shadow-lg active:scale-95 transition-transform"
         >
           <i className="fa-solid fa-share-nodes"></i>
-          Exportar e Compartilhar
+          Exportar CSV
         </button>
       </div>
 
+      {/* Seção de Gráficos de Resumo */}
+      {transactions.length > 0 && (
+        <div className="grid grid-cols-1 gap-4">
+          {/* Gráfico 50/30/20 */}
+          <div className="bg-white p-5 rounded-[2rem] border border-slate-100 shadow-sm">
+            <h3 className="text-[11px] font-black text-slate-400 uppercase tracking-widest mb-4 flex items-center gap-2">
+              <i className="fa-solid fa-chart-pie text-indigo-500"></i>
+              Regra de Gastos (50/30/20)
+            </h3>
+            <div className="h-48 w-full">
+              <ResponsiveContainer width="100%" height="100%">
+                <PieChart>
+                  <Pie
+                    data={spendingTypeData}
+                    cx="50%"
+                    cy="50%"
+                    innerRadius={50}
+                    outerRadius={70}
+                    paddingAngle={8}
+                    dataKey="value"
+                  >
+                    {spendingTypeData.map((entry, index) => (
+                      <Cell key={`cell-${index}`} fill={COLORS_SPENDING[entry.name as keyof typeof COLORS_SPENDING] || '#cbd5e1'} />
+                    ))}
+                  </Pie>
+                  <Tooltip 
+                    contentStyle={{ borderRadius: '16px', border: 'none', boxShadow: '0 10px 15px -3px rgba(0,0,0,0.1)', fontSize: '12px' }}
+                    formatter={(val: number) => `R$ ${val.toLocaleString('pt-BR')}`}
+                  />
+                  <Legend verticalAlign="bottom" align="center" iconType="circle" wrapperStyle={{ fontSize: '10px', fontWeight: 'bold', paddingTop: '10px' }} />
+                </PieChart>
+              </ResponsiveContainer>
+            </div>
+          </div>
+
+          {/* Gráfico de Métodos de Pagamento */}
+          <div className="bg-white p-5 rounded-[2rem] border border-slate-100 shadow-sm">
+            <h3 className="text-[11px] font-black text-slate-400 uppercase tracking-widest mb-4 flex items-center gap-2">
+              <i className="fa-solid fa-credit-card text-emerald-500"></i>
+              Gastos por Meio de Pagamento
+            </h3>
+            <div className="h-48 w-full">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={paymentMethodData} layout="vertical" margin={{ left: -10, right: 20 }}>
+                  <XAxis type="number" hide />
+                  <YAxis 
+                    dataKey="name" 
+                    type="category" 
+                    axisLine={false} 
+                    tickLine={false} 
+                    tick={{ fontSize: 10, fontWeight: 'bold', fill: '#64748b' }} 
+                    width={70}
+                  />
+                  <Tooltip 
+                    cursor={{fill: '#f8fafc'}}
+                    contentStyle={{ borderRadius: '16px', border: 'none', boxShadow: '0 10px 15px -3px rgba(0,0,0,0.1)', fontSize: '12px' }}
+                    formatter={(val: number) => `R$ ${val.toLocaleString('pt-BR')}`}
+                  />
+                  <Bar dataKey="value" radius={[0, 10, 10, 0]} barSize={20}>
+                    {paymentMethodData.map((entry, index) => (
+                      <Cell key={`cell-${index}`} fill={COLORS_PAYMENT[index % COLORS_PAYMENT.length]} />
+                    ))}
+                  </Bar>
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Tabela de Dados */}
       <div className="overflow-x-auto bg-white rounded-[1.5rem] border border-slate-100 shadow-sm min-w-full">
         <table className="w-full text-left border-collapse table-fixed min-w-[750px]">
           <thead>

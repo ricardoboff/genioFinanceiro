@@ -1,4 +1,3 @@
-
 import { GoogleGenAI } from "@google/genai";
 import { Transaction } from "../types";
 
@@ -13,16 +12,18 @@ export const getFinancialAdvice = async (transactions: Transaction[]) => {
   ).join('\n');
 
   try {
-    // Fix: Create a new instance right before making an API call and use gemini-3-pro-preview for complex reasoning tasks.
+    // Using gemini-3-flash-preview for basic financial summarization and advice.
+    // Always initialize a new GoogleGenAI instance right before the call to ensure the latest config.
     const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
     const response = await ai.models.generateContent({
-      model: 'gemini-3-pro-preview',
+      model: 'gemini-3-flash-preview',
       contents: `Aqui estão minhas transações recentes:\n\n${transactionSummary}`,
       config: {
         systemInstruction: "Você é um consultor financeiro amigável e focado em economia doméstica. Dê 3 dicas curtas e práticas baseadas nos gastos manuais do usuário. Não mencione bancos, apenas o comportamento de gastos. Use Markdown.",
       }
     });
-    // Fix: Use the .text property directly (not a method).
+    
+    // Access the .text property directly as it returns string | undefined.
     return response.text || "Não foi possível gerar dicas no momento.";
   } catch (error) {
     console.error("Erro na IA:", error);

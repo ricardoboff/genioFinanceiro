@@ -1,8 +1,7 @@
-
+// Firebase configuration and initialization
 import { initializeApp } from "firebase/app";
 import { getFirestore } from "firebase/firestore";
-// Correct modular imports for Firebase Auth v9+
-// Using multiline import to ensure clarity and potentially resolve resolution issues in some environments
+// Use modular imports for Firebase Auth v9+
 import { 
   getAuth, 
   signInWithEmailAndPassword, 
@@ -22,11 +21,11 @@ const firebaseConfig = {
 
 const app = initializeApp(firebaseConfig);
 
-// Initialize Firestore and Auth instances following modular patterns.
+// Export initialized service instances
 export const db = getFirestore(app);
 export const auth = getAuth(app);
 
-// Re-exporting functions for use in components to maintain modular architecture.
+// Re-export Auth methods for cleaner consumption in components
 export { 
   signInWithEmailAndPassword, 
   createUserWithEmailAndPassword, 

@@ -1,6 +1,6 @@
 
 import React, { useState } from 'react';
-import { Transaction, TransactionType, CATEGORIES } from '../types';
+import { Transaction, TransactionType, CATEGORIES, SpendingType, PaymentMethod } from '../types';
 
 interface Props {
   onAdd: (t: Transaction) => void;
@@ -13,8 +13,9 @@ const TransactionForm: React.FC<Props> = ({ onAdd, onClose, selectedDate }) => {
   const [description, setDescription] = useState('');
   const [amount, setAmount] = useState('');
   const [category, setCategory] = useState(CATEGORIES[0]);
+  const [spendingType, setSpendingType] = useState<SpendingType>('Necessidades');
+  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('Pix');
   
-  // Inicializa a data com hoje no formato YYYY-MM-DD para o input
   const today = new Date();
   const [dateStr, setDateStr] = useState(today.toISOString().split('T')[0]);
 
@@ -22,18 +23,18 @@ const TransactionForm: React.FC<Props> = ({ onAdd, onClose, selectedDate }) => {
     e.preventDefault();
     if (!description || !amount || !dateStr) return;
 
-    // Converte a string YYYY-MM-DD para um objeto Date
-    // Usamos o meio do dia para evitar problemas de fuso horário na conversão
     const [year, month, day] = dateStr.split('-').map(Number);
     const transactionDate = new Date(year, month - 1, day, 12, 0, 0);
 
     const newTransaction: Transaction = {
-      id: '', // O Firestore gera o ID
+      id: '',
       description,
       amount: parseFloat(amount.replace(',', '.')),
       date: transactionDate.toISOString(),
       category,
       type,
+      spendingType: type === TransactionType.INCOME ? 'Renda' : spendingType,
+      paymentMethod,
     };
 
     onAdd(newTransaction);
@@ -41,10 +42,8 @@ const TransactionForm: React.FC<Props> = ({ onAdd, onClose, selectedDate }) => {
 
   return (
     <div className="fixed inset-0 z-[100] flex items-end sm:items-center justify-center p-0 sm:p-4">
-      {/* Backdrop */}
       <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" onClick={onClose}></div>
       
-      {/* Form Container */}
       <div className="relative w-full max-w-md bg-white rounded-t-[2rem] sm:rounded-3xl shadow-2xl p-6 overflow-hidden animate-slide-up">
         <div className="w-12 h-1.5 bg-slate-200 rounded-full mx-auto mb-6 sm:hidden"></div>
         
@@ -55,82 +54,110 @@ const TransactionForm: React.FC<Props> = ({ onAdd, onClose, selectedDate }) => {
           </button>
         </div>
 
-        <form onSubmit={handleSubmit} className="space-y-5 overflow-y-auto max-h-[80vh] pb-4">
-          {/* Type Toggle */}
+        <form onSubmit={handleSubmit} className="space-y-4 overflow-y-auto max-h-[80vh] pb-4 pr-1">
           <div className="flex bg-slate-100 p-1.5 rounded-2xl">
             <button
               type="button"
-              onClick={() => setType(TransactionType.EXPENSE)}
+              onClick={() => { setType(TransactionType.EXPENSE); setSpendingType('Necessidades'); }}
               className={`flex-1 py-3 text-sm font-bold rounded-xl transition-all ${type === TransactionType.EXPENSE ? 'bg-white text-rose-600 shadow-sm' : 'text-slate-500'}`}
             >
-              <i className="fa-solid fa-arrow-up mr-2"></i> Saída
+              Saída
             </button>
             <button
               type="button"
-              onClick={() => setType(TransactionType.INCOME)}
+              onClick={() => { setType(TransactionType.INCOME); setSpendingType('Renda'); }}
               className={`flex-1 py-3 text-sm font-bold rounded-xl transition-all ${type === TransactionType.INCOME ? 'bg-white text-emerald-600 shadow-sm' : 'text-slate-500'}`}
             >
-              <i className="fa-solid fa-arrow-down mr-2"></i> Entrada
+              Entrada
             </button>
           </div>
 
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2 px-1">Valor (R$)</label>
+              <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1 px-1">Valor (R$)</label>
               <input 
                 type="text" 
                 inputMode="decimal"
                 value={amount}
                 onChange={(e) => setAmount(e.target.value)}
                 placeholder="0,00"
-                className="w-full text-2xl font-bold text-slate-800 bg-slate-50 border border-slate-100 rounded-2xl p-4 focus:border-indigo-500 focus:outline-none placeholder:text-slate-200"
-                autoFocus
+                className="w-full text-xl font-bold text-slate-800 bg-slate-50 border border-slate-100 rounded-2xl p-4 focus:border-indigo-500 focus:outline-none"
               />
             </div>
             <div>
-              <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2 px-1">Data</label>
+              <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1 px-1">Data</label>
               <input 
                 type="date" 
                 value={dateStr}
                 onChange={(e) => setDateStr(e.target.value)}
-                className="w-full p-4 bg-slate-50 border border-slate-100 rounded-2xl focus:bg-white focus:ring-2 focus:ring-indigo-500 focus:outline-none transition-all text-sm"
+                className="w-full p-4 bg-slate-50 border border-slate-100 rounded-2xl focus:outline-none text-sm"
               />
             </div>
           </div>
 
           <div>
-            <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2 px-1">Descrição</label>
+            <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1 px-1">Descrição</label>
             <input 
               type="text" 
               value={description}
               onChange={(e) => setDescription(e.target.value)}
-              placeholder="Ex: Aluguel, Supermercado..."
-              className="w-full p-4 bg-slate-50 border border-slate-100 rounded-2xl focus:bg-white focus:ring-2 focus:ring-indigo-500 focus:outline-none transition-all text-sm"
+              placeholder="Ex: Netflix, Aluguel..."
+              className="w-full p-4 bg-slate-50 border border-slate-100 rounded-2xl focus:outline-none text-sm"
             />
           </div>
 
-          <div>
-            <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2 px-1">Categoria</label>
-            <select 
-              value={category}
-              onChange={(e) => setCategory(e.target.value)}
-              className="w-full p-4 bg-slate-50 border border-slate-100 rounded-2xl focus:bg-white focus:ring-2 focus:ring-indigo-500 focus:outline-none transition-all text-sm appearance-none"
-            >
-              {CATEGORIES.map(c => (
-                <option key={c} value={c}>{c}</option>
-              ))}
-            </select>
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1 px-1">Categoria</label>
+              <select 
+                value={category}
+                onChange={(e) => setCategory(e.target.value)}
+                className="w-full p-4 bg-slate-50 border border-slate-100 rounded-2xl focus:outline-none text-sm appearance-none"
+              >
+                {CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
+              </select>
+            </div>
+            <div>
+              <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1 px-1">Meio de Pagamento</label>
+              <select 
+                value={paymentMethod}
+                onChange={(e) => setPaymentMethod(e.target.value as PaymentMethod)}
+                className="w-full p-4 bg-slate-50 border border-slate-100 rounded-2xl focus:outline-none text-sm appearance-none"
+              >
+                <option value="Pix">Pix</option>
+                <option value="Crédito">Crédito</option>
+                <option value="Débito">Débito</option>
+                <option value="Dinheiro">Dinheiro</option>
+              </select>
+            </div>
           </div>
+
+          {type === TransactionType.EXPENSE && (
+            <div>
+              <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1 px-1">Tipo de Gasto</label>
+              <div className="grid grid-cols-2 gap-2">
+                {['Necessidades', 'Desejos'].map((t) => (
+                  <button
+                    key={t}
+                    type="button"
+                    onClick={() => setSpendingType(t as SpendingType)}
+                    className={`py-3 rounded-xl text-xs font-bold border ${spendingType === t ? 'bg-indigo-600 text-white border-indigo-600' : 'bg-slate-50 text-slate-500 border-slate-100'}`}
+                  >
+                    {t}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
 
           <button 
             type="submit"
-            className={`w-full py-4 rounded-2xl text-white font-bold text-lg shadow-lg transition-transform active:scale-95 ${type === TransactionType.INCOME ? 'bg-emerald-500 shadow-emerald-200' : 'bg-rose-500 shadow-rose-200'}`}
+            className={`w-full py-4 rounded-2xl text-white font-bold text-lg shadow-lg mt-4 ${type === TransactionType.INCOME ? 'bg-emerald-500' : 'bg-rose-500'}`}
           >
-            Adicionar Transação
+            Salvar Lançamento
           </button>
         </form>
       </div>
-
       <style>{`
         @keyframes slide-up {
           from { transform: translateY(100%); opacity: 0; }
